@@ -41,7 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using VeriFactu.Common;
-using VeriFactu.Config;
+
 using VeriFactu.Qrcode;
 using VeriFactu.Qrcode.Exceptions;
 
@@ -249,11 +249,11 @@ namespace VeriFactu.Xml.Factu
         /// Devuelve la url para la validación del documento.
         /// </summary>
         /// <returns>Url para la validación del documento.</returns>
-        public string GetUrlValidate() 
+        public string GetUrlValidate(string VeriFactuEndPointValidatePrefix) 
         {
 
             var urlParams = GetValidateUrlParams();
-            return $"{Settings.Current.VeriFactuEndPointValidatePrefix}?{urlParams}";
+            return $"{VeriFactuEndPointValidatePrefix}?{urlParams}";
         
         }
 
@@ -263,10 +263,10 @@ namespace VeriFactu.Xml.Factu
         /// </summary>
         /// <returns>Bitmap con la url de validación
         /// codificada en un código QR.</returns>
-        public byte[] GetValidateQr() 
+        public byte[] GetValidateQr(string VeriFactuEndPointValidatePrefix) 
         {
 
-            var content = GetUrlValidate();
+            var content = GetUrlValidate(VeriFactuEndPointValidatePrefix);
             return GetQr(content);
 
         }

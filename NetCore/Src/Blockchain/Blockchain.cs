@@ -41,7 +41,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using VeriFactu.Common;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Exceptions;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 
@@ -51,8 +52,10 @@ namespace VeriFactu.Blockchain
     /// <summary>
     /// Representa una cadena de bloques.
     /// </summary>
-    public class Blockchain : SingletonByKey<Blockchain>
+    public class Blockchain
     {
+        protected IBlockchainService _blockchainService;
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         #region Variables Privadas Estáticas
 
@@ -80,7 +83,7 @@ namespace VeriFactu.Blockchain
         static Blockchain()
         {
 
-            LoadBlockchainsFromDisk();
+            //LoadBlockchainsFromDisk();
             Initialized = true;
 
         }
@@ -93,37 +96,19 @@ namespace VeriFactu.Blockchain
         /// Constructor.
         /// </summary>
         /// <param name="sellerID">Vendedor al que pertenece la cadena de bloques.</param>
-        public Blockchain(string sellerID) : base(sellerID)
+        public Blockchain(string sellerID, int companyId, IBlockchainService blockchainService)
         {
-
-            BlockchainPath = GetBlockchainPath(Key);
-            SellerID = Key;
-
+            _blockchainService = blockchainService;
+            SellerID = sellerID;
+            CompanyId = companyId;
         }
+
 
         #endregion
 
         #region Métodos Privados de Instancia
 
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de la cadena
-        /// de bloques.
-        /// </summary>
-        /// <param name="sellerID">Emisor al que pertenece la
-        /// cadena de bloques a gestionar.</param>
-        /// <returns>Ruta de almacenamiento de la cadena
-        /// de bloques.</returns>
-        private string GetBlockchainPath(string sellerID)
-        {
 
-            var dir = $"{Settings.Current.BlockchainPath}{sellerID}";
-
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            return $"{dir}{Path.DirectorySeparatorChar}";
-
-        }
 
         /// <summary>
         /// Devuelve un encadenamiento con el último elemento
@@ -341,7 +326,7 @@ namespace VeriFactu.Blockchain
         /// <summary>
         /// Indica si el sistema de cadena de bloques está inicializado.
         /// </summary>
-        public static bool Initialized { get; private set; }
+        public static bool Initialized { get; protected set; }
 
         #endregion
 
@@ -353,43 +338,45 @@ namespace VeriFactu.Blockchain
         /// En caso de no existir, se puede utilizar el número DUNS 
         /// o cualquier otro identificador acordado.
         /// </summary>        
-        public string SellerID { get; private set; }
+        public string SellerID { get;  set; }
+
+        public int CompanyId { get; set; }
 
         /// <summary>
         /// Identificador del último eslabón de la cadena.
         /// </summary>
-        public ulong CurrentID { get; private set; }
+        public ulong CurrentID { get;  set; }
 
         /// <summary>
         /// Momento de generación del último eslabón de la cadena.
         /// </summary>
-        public DateTime? CurrentTimeStamp { get; private set; }
+        public DateTime? CurrentTimeStamp { get;  set; }
 
         /// <summary>
         /// Último elemento de la cadena.
         /// </summary>
-        public Registro Current { get; private set; }
+        public Registro Current { get;  set; }
 
         /// <summary>
         /// Identificador del penúltimo eslabón de la cadena.
         /// </summary>
-        public ulong PreviousID { get; private set; }
+        public ulong PreviousID { get;  set; }
 
         /// <summary>
         /// Momento de generación del penúltimo eslabón de la cadena.
         /// </summary>
-        public DateTime? PreviousTimeStamp { get; private set; }
+        public DateTime? PreviousTimeStamp { get;  set; }
 
         /// <summary>
         /// Penúltimo elemento de la cadena.
         /// </summary>
-        public Registro Previous { get; private set; }
+        public Registro Previous { get;  set; }
 
         /// <summary>
         /// Path del directorio de archivado de los datos de la
         /// cadena.
         /// </summary>
-        public string BlockchainPath { get; private set; }
+        public string BlockchainPath { get;  set; }
 
         /// <summary>
         /// Archivo que almacena el valor de las variables en curso
@@ -424,59 +411,60 @@ namespace VeriFactu.Blockchain
         public static Blockchain Get(string sellerID)
         {
 
-            return GetInstance(sellerID) as Blockchain;
+            //return GetInstance(sellerID) as Blockchain;
+            return null;
 
         }
 
         /// <summary>
         /// Carga todas las cadenas de bloques.
         /// </summary>
-        public static void LoadBlockchainsFromDisk()
-        {
+        //public static void LoadBlockchainsFromDisk()
+        //{
 
-            if (string.IsNullOrEmpty(Settings.Current.BlockchainPath) || !Directory.Exists(Settings.Current.BlockchainPath))
-                throw new InvalidOperationException($"Revise el archivo de configuración {Settings.FileName}," +
-                    $" el valor de BlockchainPath debe ser el de un directorio válido.");
+        //    if (string.IsNullOrEmpty(Settings.Current.BlockchainPath) || !Directory.Exists(Settings.Current.BlockchainPath))
+        //        throw new InvalidOperationException($"Revise el archivo de configuración {Settings.FileName}," +
+        //            $" el valor de BlockchainPath debe ser el de un directorio válido.");
 
-            var dirs = Directory.GetDirectories(Settings.Current.BlockchainPath);
+        //    var dirs = Directory.GetDirectories(Settings.Current.BlockchainPath);
 
-            foreach (var dir in dirs)
-            {
+        //    foreach (var dir in dirs)
+        //    {
 
-                var sellerID = Path.GetFileName(dir);
-                var blockchain = new Blockchain(sellerID);
+        //        var sellerID = Path.GetFileName(dir);
+        //        var blockchain = new Blockchain(sellerID);
 
-                if (File.Exists(blockchain.BlockchainVarFileName))
-                {
+        //        if (File.Exists(blockchain.BlockchainVarFileName))
+        //        {
 
-                    var lineVarData = File.ReadAllText(blockchain.BlockchainVarFileName);
-                    var valuesVarData = lineVarData.Split(_CsvSeparator);
+        //            var lineVarData = File.ReadAllText(blockchain.BlockchainVarFileName);
+        //            var valuesVarData = lineVarData.Split(_CsvSeparator);
 
-                    var currentID = valuesVarData[0];
-                    var currentTimeStamp = valuesVarData[1];
-                    var huella = valuesVarData[2];
-                    var fechaExpedicionFactura = valuesVarData[3];
-                    var idEmisorFactura = valuesVarData[4];
-                    var numSerieFactura = valuesVarData[5];
+        //            var currentID = valuesVarData[0];
+        //            var currentTimeStamp = valuesVarData[1];
+        //            var huella = valuesVarData[2];
+        //            var fechaExpedicionFactura = valuesVarData[3];
+        //            var idEmisorFactura = valuesVarData[4];
+        //            var numSerieFactura = valuesVarData[5];
 
-                    blockchain.CurrentID = Convert.ToUInt64(currentID);
-                    blockchain.CurrentTimeStamp = Convert.ToDateTime(currentTimeStamp);
-                    blockchain.Current = new Registro()
-                    {
-                        Huella = huella,
-                        IDFactura = new IDFactura()
-                        {
-                            FechaExpedicion = fechaExpedicionFactura,
-                            IDEmisor = idEmisorFactura,
-                            NumSerie = numSerieFactura
-                        }
-                    };
+        //            blockchain.CurrentID = Convert.ToUInt64(currentID);
+        //            blockchain.CurrentTimeStamp = Convert.ToDateTime(currentTimeStamp);
+        //            blockchain.Current = new Registro()
+        //            {
+        //                Huella = huella,
+        //                IDFactura = new IDFactura()
+        //                {
+        //                    FechaExpedicion = fechaExpedicionFactura,
+        //                    IDEmisor = idEmisorFactura,
+        //                    NumSerie = numSerieFactura
+        //                }
+        //            };
 
-                }
+        //        }
 
-            }
+        //    }
 
-        }
+        //}
 
         #endregion
 
@@ -498,7 +486,8 @@ namespace VeriFactu.Blockchain
                 {
 
                     Insert(registro);
-                    Write();
+                    _blockchainService.AddBlockchain(this.ToBlockchainFacturasApp(CompanyId));
+                    //Write();
 
                 }
                 catch (Exception ex) 
@@ -559,39 +548,26 @@ namespace VeriFactu.Blockchain
         /// Sólo puede eliminarse el último elemento añadido.</param> 
         public void Delete(Registro registro) 
         {
-
-            if (registro.Huella != Current.Huella)
-                throw new InvalidOperationException($"Se ha intentado borrar el registro" +
-                    $" {registro.Huella} que no coincide con el último {Current.Huella}");
-
-            var blockchainDataFileName = BlockchainDataFileName;
-            var blockchainDataPreviousFileName = BlockchainDataPreviousFileName;
-
-            Remove();
-
-            Exception restoreException = null;
-
-            lock (_Locker)
+            try
             {
-                
-                try 
-                {
+                if (registro.Huella != Current.Huella)
+                    throw new InvalidOperationException($"Se ha intentado borrar el registro" +
+                        $" {registro.Huella} que no coincide con el último {Current.Huella}");
 
-                    WriteVar();
-                    RestorePreviousData(blockchainDataFileName, blockchainDataPreviousFileName);
+                var blockchainDataFileName = BlockchainDataFileName;
+                var blockchainDataPreviousFileName = BlockchainDataPreviousFileName;
 
-                }
-                catch (Exception ex) 
-                {
+                Remove();
 
-                    restoreException = ex;
-
-                }
+                //WriteVar();
+                //RestorePreviousData(blockchainDataFileName, blockchainDataPreviousFileName);
+                _blockchainService.RemoveBlockchain(Id);
 
             }
-
-            if (restoreException != null)
-                throw new Exception($"Error al restaurar datos borrando último eslabón de la cadena.", restoreException);
+            catch (Exception ex)
+            {
+                throw new VerifactuBlockchainException("Error al restaurar datos borrando último eslabón de la cadena.", ex);
+            }
 
         }
 

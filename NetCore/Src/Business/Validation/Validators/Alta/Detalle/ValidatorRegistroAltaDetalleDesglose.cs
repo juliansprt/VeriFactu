@@ -39,6 +39,7 @@
 
 using System.Collections.Generic;
 using VeriFactu.Business.Validation.Validators.Alta.Detalle.Regimen;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Soap;
 
@@ -59,7 +60,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta.Detalle
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAlta"> Registro de alta del bloque Body.</param>
-        public ValidatorRegistroAltaDetalleDesglose(Envelope envelope, RegistroAlta registroAlta) : base(envelope, registroAlta)
+        public ValidatorRegistroAltaDetalleDesglose(Envelope envelope, RegistroAlta registroAlta, Settings settings) : base(envelope, registroAlta, settings)
         {
         }
 
@@ -88,19 +89,19 @@ namespace VeriFactu.Business.Validation.Validators.Alta.Detalle
                 {
 
                     // 15.1 TipoImpositivo
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseTipoImpositivo(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseTipoImpositivo(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.2 BaseImponibleACoste
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseBaseImponibleACoste(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseBaseImponibleACoste(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.3 TipoRecargoEquivalencia
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseTipoRecargoEquivalencia(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseTipoRecargoEquivalencia(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.4 CalificacionOperacion
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseCalificacionOperacion(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseCalificacionOperacion(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.5 OperacionExenta
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseOperacionExenta(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseOperacionExenta(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.6 ClaveRegimen
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseClaveRegimen(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseClaveRegimen(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
                     // 15.7 CuotaRepercutida.
-                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseCuotaRepercutida(_Envelope, _RegistroAlta, detalle).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaDetalleDesgloseCuotaRepercutida(_Envelope, _RegistroAlta, detalle, _settings).GetErrors());
 
                 }
 

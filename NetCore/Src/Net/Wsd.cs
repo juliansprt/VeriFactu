@@ -42,7 +42,7 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
-using VeriFactu.Config;
+
 
 namespace VeriFactu.Net
 {
@@ -55,25 +55,7 @@ namespace VeriFactu.Net
 
         #region Métodos Privados Estáticos
 
-        /// <summary>
-        /// Obtiene el certificado configurado y verifica la validez.
-        /// </summary>
-        /// <returns>Certificado validado.</returns>
-        internal static X509Certificate2 GetCheckedCertificate()
-        {
 
-            X509Certificate2 certificate = GetCertificate();
-
-            if (certificate == null)
-                throw new ArgumentNullException(
-                    "Certificate is null. Maybe serial number in configuration was wrong.");
-
-            CheckCertificate(certificate);
-
-            return certificate;
-          
-
-        }
 
         /// <summary>
         /// Verifica la validez del certificado.
@@ -95,14 +77,14 @@ namespace VeriFactu.Net
         /// <param name="action">Acción a ejecutar.</param>
         /// <param name="xmlDocument">Documento soap xml.</param>
         /// <returns>Devuelve la respuesta.</returns>
-        internal static string Call(string url, string action, XmlDocument xmlDocument)
+        internal static string Call(string url, string action, XmlDocument xmlDocument, X509Certificate2 certificate = null)
         {
 
             HttpWebRequest webRequest = CreateWebRequest(url, action);
 
-            X509Certificate2 certificate = GetCheckedCertificate();
-
-            webRequest.ClientCertificates.Add(certificate);
+            //X509Certificate2 certificate = GetCheckedCertificate();
+            if(certificate != null)
+                webRequest.ClientCertificates.Add(certificate);
 
             using (Stream stream = webRequest.GetRequestStream())
             {
@@ -153,100 +135,7 @@ namespace VeriFactu.Net
 
         #region Métodos Públicos Estáticos
 
-        /// <summary>
-        /// Devuelve el certificado configurado siguiendo la siguiente
-        /// jerarquía de llamadas: En primer lugar prueba a cargar el
-        /// certificado desde un archivo, si no prueba por el hash y en
-        /// último lugar prueba por el número de serie.
-        /// </summary>
-        /// <returns>Devuelve el certificado de la 
-        /// configuración para las comunicaciones.</returns>
-        public static X509Certificate2 GetCertificate()
-        {
-            var cert = GetCertificateByFile();
 
-            if (cert != null)
-                return cert;
-
-            cert = GetCertificateByThumbprint();
-
-            if (cert != null)
-                return cert;
-
-            return GetCertificateBySerial();
-
-        }
-
-        /// <summary>
-        /// Devuelve el certificado establecido en la configuración
-        /// por su número de serie..
-        /// </summary>
-        /// <returns>Devuelve el certificado de la 
-        /// configuración por número de serie para las comunicaciones.
-        /// Si no existe devuelve null.</returns>
-        public static X509Certificate2 GetCertificateBySerial()
-        {
-
-            foreach (var store in new X509Store[] { new X509Store(), new X509Store(StoreLocation.LocalMachine) }) 
-            {
-
-                store.Open(OpenFlags.ReadOnly);
-
-                foreach (X509Certificate2 cert in store.Certificates)
-                    if (cert.SerialNumber.Equals(Settings.Current.CertificateSerial, StringComparison.OrdinalIgnoreCase))
-                        return cert;
-
-            }
-
-            return null;
-
-        }
-
-        /// <summary>
-        /// Devuelve el certificado establecido en la configuración por su
-        /// hash o huella digital. 
-        /// </summary>
-        /// <returns>Devuelve el certificado de la 
-        /// configuración por hash para las comunicaciones.
-        /// Si no existe devuelve null.</returns>
-        public static X509Certificate2 GetCertificateByThumbprint()
-        {
-
-            foreach (var store in new X509Store[] { new X509Store(), new X509Store(StoreLocation.LocalMachine) })
-            {
-
-                store.Open(OpenFlags.ReadOnly);
-
-                foreach (X509Certificate2 cert in store.Certificates)
-                    if (cert.Thumbprint.Equals(Settings.Current.CertificateThumbprint, StringComparison.OrdinalIgnoreCase))
-                        return cert;
-
-            }         
-
-            return null;
-
-        }
-
-        /// <summary>
-        /// Devuelve el certificado establecido en la configuración
-        /// mediante una ruta a un fichero de certificado.
-        /// </summary>
-        /// <returns>Devuelve el certificado de la 
-        /// configuración para las comunicaciones.</returns>
-        public static X509Certificate2 GetCertificateByFile()
-        {
-
-            if (!string.IsNullOrEmpty(Settings.Current.CertificatePath) &&
-                File.Exists(Settings.Current.CertificatePath))
-                if (string.IsNullOrEmpty(Settings.Current.CertificatePassword))
-                    return new X509Certificate2(Settings.Current.CertificatePath);
-                else
-                    return new X509Certificate2(Settings.Current.CertificatePath,
-                        Settings.Current.CertificatePassword, X509KeyStorageFlags.Exportable);
-
-            return null;
-
-        }
 
         #endregion
 

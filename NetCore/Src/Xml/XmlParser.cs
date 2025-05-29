@@ -39,12 +39,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
-using VeriFactu.Config;
+
 
 namespace VeriFactu.Xml
 {
@@ -115,7 +116,7 @@ namespace VeriFactu.Xml
         /// <returns>Importe formateado.</returns>
         public static string GetXmlDecimal(decimal amount)
         {
-            return amount.ToString(Settings.DefaultNumberFormatInfo);
+            return amount.ToString(new NumberFormatInfo());
         }
 
         /// <summary>
@@ -126,7 +127,7 @@ namespace VeriFactu.Xml
         /// <returns>Importe convertido.</returns>
         public static decimal ToDecimal(string amount)
         {
-            return Convert.ToDecimal(amount, Settings.DefaultNumberFormatInfo);
+            return Convert.ToDecimal(amount, new NumberFormatInfo());
         }
 
         /// <summary>

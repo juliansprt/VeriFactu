@@ -39,7 +39,7 @@
 
 using System.Collections.Generic;
 using VeriFactu.Business.Validation.VIES;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Factu.Anulacion;
@@ -61,7 +61,7 @@ namespace VeriFactu.Business.Validation.Validators
         /// </summary>
         /// <param name="envelope">Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
-        public ValidatorSistemaInformatico(Envelope envelope) : base(envelope)
+        public ValidatorSistemaInformatico(Envelope envelope, Settings settings) : base(envelope, settings)
         {
         }
 
@@ -143,7 +143,7 @@ namespace VeriFactu.Business.Validation.Validators
                     result.Add($"Error en el bloque SistemaInformatico ({sistemaInformatico}):" +
                         $"Es obligatorio que se cumplimente CodigoPais con IDOtro.IDType != “02”.");
 
-                var isValidViesVatNumber = Settings.Current.SkipViesVatNumberValidation ? true : ViesVatNumber.Validate(sistemaInformatico.IDOtro.ID);
+                var isValidViesVatNumber = _settings.SkipNifAeatValidation ? true : ViesVatNumber.Validate(sistemaInformatico.IDOtro.ID);
 
                 // Cuando el tercero se identifique a través de la agrupación IDOtro e IDType sea “02”,
                 // se validará que el campo identificador ID se ajuste a la estructura de NIF-IVA de

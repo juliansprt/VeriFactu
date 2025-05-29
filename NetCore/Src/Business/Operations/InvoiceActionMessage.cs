@@ -37,12 +37,17 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Xml;
-using VeriFactu.Config;
 using VeriFactu.Net;
+using VeriFactu.Net.Core.Implementation;
+using VeriFactu.Net.Core.Implementation.Exceptions;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Fault;
@@ -59,7 +64,9 @@ namespace VeriFactu.Business.Operations
     /// </summary>
     public class InvoiceActionMessage : InvoiceActionData
     {
-
+        protected readonly IFileStorage _fileStorage;
+        protected readonly IElectronicInvoiceStateService _stateProcess;
+        protected readonly ILogger _logger; 
         #region Propiedades Privadas Estáticas
 
         /// <summary>
@@ -128,22 +135,25 @@ namespace VeriFactu.Business.Operations
         /// <param name="invoiceDate">Fecha emisión de documento.</param>
         /// <param name="sellerID">Identificador del vendedor.</param>        
         /// <exception cref="ArgumentNullException">Los argumentos invoiceID y sellerID no pueden ser nulos</exception>
-        public InvoiceActionMessage(string invoiceID, DateTime invoiceDate, string sellerID) : base(invoiceID, invoiceDate, sellerID)
+        public InvoiceActionMessage(string invoiceID, int invoiceId, int companyId, ElectronicInvoiceStates state, DateTime invoiceDate, string sellerID, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoiceID, invoiceId, companyId, state, settings, invoiceDate, sellerID, logger)
         {
-            OutboxPath = GetOutBoxPath(Invoice.SellerID);
-            InboxPath = GetInBoxPath(Invoice.SellerID);
+            _fileStorage = fileStorage;
+            _stateProcess = stateProcess;
+            _logger = logger;
         }
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceActionMessage(Invoice invoice) : base(invoice)
+        public InvoiceActionMessage(Invoice invoice, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, settings)
         {
+            
+            _fileStorage = fileStorage;
+            _stateProcess = stateProcess;
+            _logger = logger;
 
-            OutboxPath = GetOutBoxPath(Invoice.SellerID);
-            InboxPath = GetInBoxPath(Invoice.SellerID);
-
+            _logger.Information($"Generando el XML de la factura {invoice.InvoiceID} para su envío a la AEAT", new { invoice.InvoiceID, invoice.CompanyId, invoice } );
             // Generamos el xml
             Xml = GetXml();
 
@@ -153,69 +163,6 @@ namespace VeriFactu.Business.Operations
 
         #region Métodos Privados de Instancia
 
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de los
-        /// registros contabilizados y envíados para un
-        /// vendedor en concreto.
-        /// </summary>
-        /// <param name="sellerID">Emisor al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta de los registros contabilizados y
-        /// envíados para un vendedor en concreto.</returns>
-        internal string GetOutBoxPath(string sellerID)
-        {
-
-            return GetDirPath($"{Settings.Current.OutboxPath}{sellerID}");
-
-        }
-
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de repuestas de los
-        /// registros contabilizados y envíados para un
-        /// vendedor en concreto.
-        /// </summary>
-        /// <param name="sellerID">Emisor al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta respuestas de los registros contabilizados y
-        /// envíados para un vendedor en concreto.</returns>
-        internal string GetInBoxPath(string sellerID)
-        {
-
-            return GetDirPath($"{Settings.Current.InboxPath}{sellerID}");
-
-        }
-
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de los
-        /// registros contabilizados y envíados para un
-        /// año en concreto.
-        /// </summary>
-        /// <param name="year">Año al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta de los registros contabilizados y
-        /// envíados para un vendedor en concreto.</returns>
-        internal string GetInvoiceEntryPath(string year)
-        {
-
-            return GetDirPath($"{OutboxPath}{year}");
-
-        }
-
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de respuestas de los
-        /// registros contabilizados y envíados para un
-        /// año en concreto.
-        /// </summary>
-        /// <param name="year">Año al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta respuestas de los registros contabilizados y
-        /// envíados para un vendedor en concreto.</returns>
-        internal string GetResponsesPath(string year)
-        {
-
-            return GetDirPath($"{InboxPath}{year}");
-
-        }
 
         /// <summary>
         /// Genera el sobre SOAP.
@@ -251,41 +198,19 @@ namespace VeriFactu.Business.Operations
 
         }
 
-        /// <summary>
-        /// Devuelve el nombre completo de un archivo xml de respuesta
-        /// de la AEAT cuyo envío ha resultado erróneo.
-        /// </summary>
-        /// <returns>Nombre completo de un archivo xml de respuesta
-        /// de la AEAT que ha resultado erróneo.</returns>
-        internal string GetErrorResponseFilePath()
-        {
 
-            return $"{ResponsesPath}{InvoiceEntryID}.ERR.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        }
-
-        /// <summary>
-        /// Path de la entrada factura en el directorio de archivado de los datos de la
-        /// cadena si el documento a resultado erróneo.
-        /// </summary>
-        /// <returns>Path de la factura en el directorio de archivado de los datos de la
-        /// cadena si el documento a resultado erróneo.</returns>
-        protected string GetErrorInvoiceEntryFilePath()
-        {
-
-            return $"{InvoiceEntryPath}{InvoiceEntryID}.ERR.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        }
 
         /// <summary>
         /// Envía un xml en formato binario a la AEAT.
         /// </summary>
         /// <param name="xml">Archivo xml en formato binario a la AEAT.</param>
         /// <returns>Devuelve las respuesta de la AEAT.</returns>
-        internal string Send(byte[] xml)
+        internal string Send(byte[] xml, string endpointVerifactu, X509Certificate2 certificate = null)
         {
-
-            return SendXmlBytes(xml, Action);
+            _logger.Information($"Enviando el XML de la factura {Invoice.InvoiceID} a la AEAT", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice });
+            var result =  SendXmlBytes(xml, endpointVerifactu, Action, certificate);
+            _logger.Information($"Recibida la respuesta de la AEAT para la factura {Invoice.InvoiceID}", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice, result });
+            return result;
 
         }
 
@@ -293,10 +218,10 @@ namespace VeriFactu.Business.Operations
         /// Envía el registro a la AEAT.
         /// </summary>
         /// <returns>Devuelve las respuesta de la AEAT.</returns>
-        protected string Send()
+        protected string Send(string endpointVerifactu, X509Certificate2 certificate = null)
         {
 
-            return Send(Xml);
+            return Send(Xml, endpointVerifactu, certificate);
 
         }
 
@@ -305,13 +230,13 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <returns>Si todo funciona correctamente devuelve null.
         /// En caso contrario devuelve una excepción con el error.</returns>
-        protected void ExecuteSend()
+        protected void ExecuteSend(string endpointVerifactu, X509Certificate2 certificate = null)
         {
 
             if (!Posted)
                 throw new InvalidOperationException("No se puede enviar un registro no contabilizado (Posted = false).");
 
-            Response = Send();
+            Response = Send(endpointVerifactu, certificate);
             IsSent = true;
 
         }
@@ -326,6 +251,18 @@ namespace VeriFactu.Business.Operations
             ResponseEnvelope = GetResponseEnvelope(response);
             ProcessResponse(ResponseEnvelope);
 
+            if (ErrorFault != null)
+                throw new VerifactuResponseException($"Error en la respuesta de la AEAT: {ErrorFault.faultstring}", RespuestaRegFactuSistemaFacturacion.EstadoEnvio, fault: ErrorFault);
+            if(RespuestaRegFactuSistemaFacturacion?.RespuestaLinea?.Count > 0)
+            {
+                var errores = RespuestaRegFactuSistemaFacturacion?.RespuestaLinea?.Where(p => !string.IsNullOrEmpty(p.CodigoErrorRegistro));
+                if (errores != null && errores.Count() > 0)
+                    throw new VerifactuResponseException(
+                        $"Error en la respuesta de la AEAT: {string.Join(", ", errores.Select(p => p.DescripcionErrorRegistro))}",
+                        RespuestaRegFactuSistemaFacturacion.EstadoEnvio,
+                        errors: errores.Select(p => new VerifactuResponseError(p.CodigoErrorRegistro, p.DescripcionErrorRegistro)));
+            }
+
         }
 
         /// <summary>
@@ -335,19 +272,18 @@ namespace VeriFactu.Business.Operations
         internal void ProcessResponse(Envelope envelope)
         {
 
-            var invoiceEntryFilePath = string.IsNullOrEmpty(CSV) ? GetErrorInvoiceEntryFilePath() : InvoiceEntryFilePath;
-            var responseFilePath = string.IsNullOrEmpty(CSV) ? GetErrorResponseFilePath() : ResponseFilePath;
-
             // Almaceno xml envíado
-            File.WriteAllBytes(invoiceEntryFilePath, Xml);
+            //File.WriteAllBytes(invoiceEntryFilePath, Xml);
+            _fileStorage.SaveRequestXML(Xml, Invoice.CompanyId, Invoice.InvoiceID);
 
             // Almaceno xml de respuesta
             if (!string.IsNullOrEmpty(Response))
-                File.WriteAllText(responseFilePath, Response);
-
+                _fileStorage.SaveResponseXML(Response, Invoice.CompanyId, Invoice.InvoiceID);
+                //File.WriteAllText(responseFilePath, Response);
+            _logger.Information($"Guardando la respuesta de la AEAT para la factura {Invoice.InvoiceID}", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice });
             // Si la respuesta no ha sido correcta renombro archivo de factura
-            if (Status != "Correcto" && File.Exists(InvoiceFilePath))
-                File.Move(InvoiceFilePath, GeErrorInvoiceFilePath());
+            //if (Status != "Correcto" && File.Exists(InvoiceFilePath))
+            //    File.Move(InvoiceFilePath, GeErrorInvoiceFilePath());
 
         }
 
@@ -373,41 +309,7 @@ namespace VeriFactu.Business.Operations
         public virtual string InvoiceEntryID => Registro?.BlockchainLinkID == null ?
             null : $"{Registro.BlockchainLinkID}".PadLeft(20, '0');
 
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public string OutboxPath { get; private set; }
 
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public string InboxPath { get; private set; }
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public string InvoiceEntryPath => Registro?.FechaHoraHusoGenRegistro == null ? null : GetInvoiceEntryPath($"{Registro.FechaHoraHusoGenRegistro.Substring(0, 4)}");
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public string ResponsesPath => Registro?.FechaHoraHusoGenRegistro == null ? null : GetResponsesPath($"{Registro.FechaHoraHusoGenRegistro.Substring(0, 4)}");
-
-        /// <summary>
-        /// Path de la factura en el directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public virtual string InvoiceEntryFilePath => $"{InvoiceEntryPath}{InvoiceEntryID}.xml";
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public virtual string ResponseFilePath => $"{ResponsesPath}{InvoiceEntryID}.xml";
 
         /// <summary>
         /// Sobre SOAP.
@@ -526,22 +428,27 @@ namespace VeriFactu.Business.Operations
         /// <param name="xml">Archivo xml en formato binario a la AEAT.</param>
         /// /// <param name="op"> Acción para el webservice.</param>
         /// <returns>Devuelve las respuesta de la AEAT.</returns>
-        public static string SendXmlBytes(byte[] xml, string op = null)
+        public static string SendXmlBytes(byte[] xml, string verifactuEndpoint, string op = null, X509Certificate2 certificate = null)
         {
+            try
+            {
+                if (op == null)
+                    op = _Action;
 
-            if (op == null)
-                op = _Action;
+                XmlDocument xmlDocument = new XmlDocument();
 
-            XmlDocument xmlDocument = new XmlDocument();
+                using (var msXml = new MemoryStream(xml))
+                    xmlDocument.Load(msXml);
 
-            using (var msXml = new MemoryStream(xml))
-                xmlDocument.Load(msXml);
-
-            var url = Settings.Current.VeriFactuEndPointPrefix;
-            var action = $"{url}{op}";
-
-            return Wsd.Call(url, action, xmlDocument);
-
+                var url = verifactuEndpoint;
+                var action = $"{url}{op}";
+                
+                return Wsd.Call(url, action, xmlDocument, certificate);
+            }
+            catch (Exception ex)
+            {
+                throw new VerifactuEnviandoRequestException("Error enviando el request a la AEAT", ex);
+            }
         }
 
         /// <summary>

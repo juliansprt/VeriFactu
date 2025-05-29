@@ -38,7 +38,7 @@
  */
 
 using System;
-using VeriFactu.Config;
+
 
 namespace VeriFactu.Net.Rest.Json.Serializer
 {
@@ -63,7 +63,7 @@ namespace VeriFactu.Net.Rest.Json.Serializer
 
             var d = Convert.ToDouble(value);
 
-            return d.ToString(Settings.DefaultNumberFormatInfo);            
+            return d.ToString(".");            
 
         }
 

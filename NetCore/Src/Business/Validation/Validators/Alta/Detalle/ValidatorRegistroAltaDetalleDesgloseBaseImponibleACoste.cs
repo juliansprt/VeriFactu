@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
@@ -70,7 +71,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta.Detalle
         /// <param name="registroAlta"> Registro alta factura.</param>
         /// <param name="detalleDesglose"> DetalleDesglose a validar. </param>
         public ValidatorRegistroAltaDetalleDesgloseBaseImponibleACoste(Envelope envelope, RegistroAlta registroAlta,
-            DetalleDesglose detalleDesglose) : base(envelope, registroAlta)
+            DetalleDesglose detalleDesglose, Settings settings) : base(envelope, registroAlta, settings)
         {
 
             _DetalleDesglose = detalleDesglose;

@@ -40,6 +40,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Anulacion;
 using VeriFactu.Xml.Soap;
@@ -80,7 +81,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAnulacion"> Registro de anulación del bloque Body.</param>
-        public ValidatorRegistroAnulacion(Envelope envelope, RegistroAnulacion registroAnulacion) : base(envelope)
+        public ValidatorRegistroAnulacion(Envelope envelope, RegistroAnulacion registroAnulacion, Settings settings) : base(envelope, settings)
         {
 
             _RegistroAnulacion = registroAnulacion;
@@ -110,11 +111,11 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
             var result = new List<string>();
 
             // 1. GeneradoPor
-            result.AddRange(new ValidatorRegistroAnulacionGeneradoPor(_Envelope, _RegistroAnulacion).GetErrors());
+            result.AddRange(new ValidatorRegistroAnulacionGeneradoPor(_Envelope, _RegistroAnulacion, _settings).GetErrors());
             // 2. Agrupación Generador
-            result.AddRange(new ValidatorRegistroAnulacionGenerador(_Envelope, _RegistroAnulacion).GetErrors());
+            result.AddRange(new ValidatorRegistroAnulacionGenerador(_Envelope, _RegistroAnulacion, _settings).GetErrors());
             // 3. Huella (del registro anterior)
-            result.AddRange(new ValidatorRegistroAnulacionHuella(_Envelope, _RegistroAnulacion).GetErrors());
+            result.AddRange(new ValidatorRegistroAnulacionHuella(_Envelope, _RegistroAnulacion, _settings).GetErrors());
 
 
 

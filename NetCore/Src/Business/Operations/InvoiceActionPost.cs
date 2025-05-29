@@ -37,9 +37,13 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using VeriFactu.Net;
+using VeriFactu.Net.Core.Implementation.Exceptions;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 
 namespace VeriFactu.Business.Operations
@@ -52,13 +56,10 @@ namespace VeriFactu.Business.Operations
     /// </summary>
     public class InvoiceActionPost : InvoiceActionMessage
     {
-
+        protected readonly ICertificateService _certificateService;
         #region Variables Privadas de Instancia
 
-        /// <summary>
-        /// Bloqueo para thread safe.
-        /// </summary>
-        private readonly object _Locker = new object();
+
 
         #endregion
 
@@ -68,10 +69,12 @@ namespace VeriFactu.Business.Operations
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceActionPost(Invoice invoice) : base(invoice)
+        public InvoiceActionPost(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, fileStorage, stateProcess, settings, logger)
         {
+            _certificateService = certificateService;
+            //BlockchainManager =  Blockchain.Blockchain.Get(Invoice.SellerID);
+            BlockchainManager = blockchainService.GetBlockchain(invoice.CompanyId).ToBlockchainVerifactu(blockchainService);
 
-            BlockchainManager = Blockchain.Blockchain.Get(Invoice.SellerID);
 
         }
 
@@ -88,12 +91,23 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         internal virtual void Post()
         {
+            try
+            {
+                // Añadimos el registro de alta (1)
+                _logger.Information("Añadiendo el registro {InvoiceID} a la cadena de bloques", Invoice.InvoiceID);
+                BlockchainManager.Add(Registro);
+                _logger.Information("Registro {InvoiceID} añadido a la cadena de bloques", Invoice.InvoiceID);
+            }
+            catch (Exception ex)
+            {
+                throw new VerifactuBlockchainException("Error al generar el Blockchain", ex);
+            }
 
-            // Añadimos el registro de alta (1)
-            BlockchainManager.Add(Registro);
 
             // Actualizamos datos (2,3,4)
+            _logger.Information("Guardando cambios en la cadena de bloques para el registro {InvoiceID}", Invoice.InvoiceID);   
             SaveBlockchainChanges();
+            _logger.Information("Cambios guardados en la cadena de bloques para el registro {InvoiceID}", Invoice.InvoiceID);
 
         }
 
@@ -108,19 +122,28 @@ namespace VeriFactu.Business.Operations
         {
 
             if (Registro.BlockchainLinkID == 0)
-                throw new InvalidOperationException($"El registro {Registro}" +
+                throw new VerifactuBlockchainException($"El registro {Registro}" +
                     $" no está incluido en la cadena de bloques.");
 
             if (Posted)
-                throw new InvalidOperationException($"La operación {this}" +
+                throw new VerifactuBlockchainException($"La operación {this}" +
                     $" ya está contabilizada.");
 
+            try
+            {
+                // Regeneramos el Xml
+                Xml = GetXml();
 
-            // Regeneramos el Xml
-            Xml = GetXml();
+                // Guardamos el xml
+                _fileStorage.SaveRequestXML(Xml, Invoice.CompanyId, Invoice.InvoiceID);
+            }
+            catch (Exception ex)
+            {
+                throw new VerifactuRequestXMLException("Error al generar el XML de Envio", ex);
+            }
 
-            // Guardamos el xml
-            File.WriteAllBytes(InvoiceFilePath, Xml);
+
+            //File.WriteAllBytes(InvoiceFilePath, Xml);
 
             // Marcamos como contabilizado
             Posted = true;
@@ -134,40 +157,8 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         protected void ClearPost()
         {
-
-            Exception undoException = null;
-
-            lock (_Locker)
-            {
-
-                try
-                {
-
-                    //Reevierto cambios
-                    BlockchainManager.Delete(Registro);
-
-                    if (File.Exists(InvoiceEntryFilePath))
-                        File.Move(InvoiceEntryFilePath, GetErrorInvoiceEntryFilePath());
-
-                    if (File.Exists(InvoiceFilePath))
-                        File.Move(InvoiceFilePath, GeErrorInvoiceFilePath());
-
-                    Posted = false;
-
-                }
-                catch (Exception ex)
-                {
-
-                    undoException = ex;
-
-                }
-
-            }
-
-            if (undoException != null)
-                throw new Exception($"Se ha producido un error al intentar descontabilizar" +
-                    $" el envío en la cadena de bloques.", undoException);
-
+            BlockchainManager.Delete(Registro);
+            Posted = false;
         }
 
         /// <summary>
@@ -175,38 +166,16 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <returns>Si todo funciona correctamente devuelve null.
         /// En caso contrario devuelve una excepción con el error.</returns>
-        internal void ExecutePost()
+        internal void ExecutePost(X509Certificate2 certificate = null)
         {
 
             // Compruebo el certificado
-            var cert = Wsd.GetCheckedCertificate();
+            //var cert = Wsd.GetCheckedCertificate();
 
-            if (cert == null)
+            if (certificate == null)
                 throw new Exception("Existe algún problema con el certificado.");
-
-            Exception postException = null;
-
-            lock (_Locker)
-            {
-
-                try
-                {
-
-                    Post();                   
-
-                }
-                catch (Exception ex)
-                {
-
-                    postException = ex;
-
-                }
-
-            }
-
-            if (postException != null)
-                throw new Exception($"Se ha producido un error al intentar contabilizar" +
-                    $" el envío en la cadena de bloques.", postException);
+            
+            Post();
 
         }
 
@@ -233,30 +202,43 @@ namespace VeriFactu.Business.Operations
                 throw new InvalidOperationException("El objeto InvoiceEntry sólo" +
                     " puede llamar al método Save() una vez.");
 
-            Exception sentException = null;
-
-            ExecutePost();
-
+            _logger.Information("Iniciando Obtencion del sertificado de la entrada {InvoiceID}", Invoice.InvoiceID);
+            var cert = _certificateService.GetCertificate(Invoice.CompanyId);
+            _logger.Information("Certificado obtenido de la entrada {InvoiceID}", Invoice.InvoiceID);
             try
             {
-                ExecuteSend();
+
+                ExecutePost(cert);
+                _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.PendingSendAEAT, string.Empty);
+                _logger.Information("Iniciando envio a AEAT de la entrada {InvoiceID} Cambio de estado a PendingSendAEAT", Invoice.InvoiceID);
+
+                ExecuteSend(_settings.VeriFactuEndPointPrefix, cert);
+
+                _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.SendedAEAT, string.Empty);
+                _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito Cambio de estado a SendedAEAT", Invoice.InvoiceID);
                 ProcessResponse();
+            }
+            catch (VerifactuExceptions ex)
+            {
+                _logger.Information(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
+                ClearPost();
+                throw;
             }
             catch (Exception ex)
             {
-
-                sentException = ex;
+                _logger.Error(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
                 ClearPost();
-
+                throw;
             }
 
-            if (string.IsNullOrEmpty(CSV) || sentException != null)
-                if(sentException == null)
-                    ClearPost();
+            _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito", Invoice.InvoiceID);
+            _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.Valid, string.Empty);
+            _logger.Information("Cambio de estado a Valid de la entrada {InvoiceID}", Invoice.InvoiceID);
+            //if (string.IsNullOrEmpty(CSV))
+            //{
+            //    ClearPost();
+            //}
 
-            if (sentException != null)
-                throw new Exception($"Se ha producido un error al intentar realizar el envío" +
-                    $" o procesar la respuesta.", sentException);
 
             IsSaved = true;
 

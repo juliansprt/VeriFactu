@@ -37,9 +37,11 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu.Alta;
 
 namespace VeriFactu.Business
@@ -58,7 +60,7 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceFix(Invoice invoice) : base(invoice)
+        public InvoiceFix(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger)
         {
         }
 
@@ -89,32 +91,6 @@ namespace VeriFactu.Business
 
         #endregion
 
-        #region Propiedades Públicas de Instancia
-
-        /// <summary>
-        /// Path de la factura original en el directorio de facturas.
-        /// </summary>
-        public string OriginalInvoiceFilePath => $"{InvoicePostedPath}{EncodedInvoiceID}.xml";
-
-        /// <summary>
-        /// Path de la factura en el directorio de facturas.
-        /// </summary>
-        public override string InvoiceFilePath => $"{InvoicePostedPath}{EncodedInvoiceID}.SUB.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        /// <summary>
-        /// Path de la factura en el directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string InvoiceEntryFilePath => $"{InvoiceEntryPath}{InvoiceEntryID}.SUB.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string ResponseFilePath => $"{ResponsesPath}{InvoiceEntryID}.SUB.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        #endregion
-
         #region Métodos Públicos de Instancia
 
         /// <summary>
@@ -126,11 +102,6 @@ namespace VeriFactu.Business
         {
 
             var errors = new List<string>();
-
-            // Comprobamos que la factura existe
-            if (!File.Exists(base.InvoiceFilePath))
-                errors.Add($"No existe una entrada con SellerID: {Invoice.SellerID}" +
-                    $" en el año {Invoice.InvoiceDate.Year} con el número {Invoice.InvoiceID}.");
 
             if (string.IsNullOrEmpty(Invoice.SellerName))
                 errors.Add($"Es necesario que la propiedad Invoice.SellerName tenga un valor.");

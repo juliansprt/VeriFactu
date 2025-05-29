@@ -41,6 +41,7 @@ using System;
 using System.Collections.Generic;
 using VeriFactu.Business.Operations;
 using VeriFactu.Business.Validation.Validators;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Soap;
 
@@ -56,7 +57,7 @@ namespace VeriFactu.Business.Validation
     /// </summary>
     public class InvoiceValidation : IValidator
     {
-
+        protected readonly Settings _settings;
         #region Variables Privadas de Instancia
 
         /// <summary>
@@ -78,7 +79,7 @@ namespace VeriFactu.Business.Validation
         /// Constructor.
         /// </summary>
         /// <param name="invoiceAction">Objeto InvoiceAction a validar.</param>
-        public InvoiceValidation(InvoiceAction invoiceAction) : this(invoiceAction.Envelope)
+        public InvoiceValidation(InvoiceAction invoiceAction, Settings settings) : this(invoiceAction.Envelope, settings)
         {
 
             _RegFactuSistemaFacturacion = _Envelope.Body.Registro as RegFactuSistemaFacturacion;
@@ -89,9 +90,9 @@ namespace VeriFactu.Business.Validation
         /// Constructor.
         /// </summary>
         /// <param name="envelope">Objeto Envelope a validar.</param>
-        public InvoiceValidation(Envelope envelope)
+        public InvoiceValidation(Envelope envelope, Settings settings)
         {
-
+            _settings = settings;
             _Envelope = envelope;
 
             _RegFactuSistemaFacturacion = envelope.Body.Registro as RegFactuSistemaFacturacion;
@@ -138,9 +139,9 @@ namespace VeriFactu.Business.Validation
 
             var result = new List<string>();
 
-            var errorsCabecera = new ValidatorCabecera(_Envelope).GetErrors();
-            var errorsRegistrosFactura = new ValidatorRegistroFactura(_Envelope).GetErrors();
-            var errorsSistemaInrformatico = new ValidatorSistemaInformatico(_Envelope).GetErrors();
+            var errorsCabecera = new ValidatorCabecera(_Envelope, _settings).GetErrors();
+            var errorsRegistrosFactura = new ValidatorRegistroFactura(_Envelope, _settings).GetErrors();
+            var errorsSistemaInrformatico = new ValidatorSistemaInformatico(_Envelope, _settings).GetErrors();
 
             result.AddRange(errorsCabecera);
             result.AddRange(errorsRegistrosFactura);

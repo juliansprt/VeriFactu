@@ -39,7 +39,7 @@
 
 using System.Collections.Generic;
 using System.IO;
-using VeriFactu.Config;
+
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Soap;
 
@@ -81,38 +81,38 @@ namespace VeriFactu.DataStore
 
             var sellersDic = new Dictionary<string, List<PeriodOutbox>>();
 
-            foreach (var sellerDir in Directory.GetDirectories(Settings.Current.OutboxPath))
-            {
+            //foreach (var sellerDir in Directory.GetDirectories(Settings.Current.OutboxPath))
+            //{
 
-                foreach (var periodDir in Directory.GetDirectories(sellerDir))
-                {
-                    var invoiceFiles = Directory.GetFiles(periodDir);
+            //    foreach (var periodDir in Directory.GetDirectories(sellerDir))
+            //    {
+            //        var invoiceFiles = Directory.GetFiles(periodDir);
 
-                    if (invoiceFiles.Length > 0)
-                    {
+            //        if (invoiceFiles.Length > 0)
+            //        {
 
-                        var periodID = Path.GetFileName(periodDir);
-                        var envelope = new Envelope(invoiceFiles[0]);
-                        var registro = (envelope.Body.Registro as RegFactuSistemaFacturacion);
+            //            var periodID = Path.GetFileName(periodDir);
+            //            var envelope = new Envelope(invoiceFiles[0]);
+            //            var registro = (envelope.Body.Registro as RegFactuSistemaFacturacion);
 
-                        var seller = new Seller()
-                        {
-                            SellerID = $"{registro?.Cabecera?.ObligadoEmision?.IDOtro?.ID}{registro?.Cabecera?.ObligadoEmision?.NIF}",
-                            SellerName = $"{registro?.Cabecera?.ObligadoEmision?.NombreRazon}"
-                        };
+            //            var seller = new Seller()
+            //            {
+            //                SellerID = $"{registro?.Cabecera?.ObligadoEmision?.IDOtro?.ID}{registro?.Cabecera?.ObligadoEmision?.NIF}",
+            //                SellerName = $"{registro?.Cabecera?.ObligadoEmision?.NombreRazon}"
+            //            };
 
-                        var period = new PeriodOutbox(seller, periodID, invoiceFiles.Length);
+            //            var period = new PeriodOutbox(seller, periodID, invoiceFiles.Length);
 
-                        if (sellersDic.ContainsKey(seller.SellerID))
-                            sellersDic[seller.SellerID].Add(period);
-                        else
-                            sellersDic.Add(seller.SellerID, new List<PeriodOutbox>() { period });
+            //            if (sellersDic.ContainsKey(seller.SellerID))
+            //                sellersDic[seller.SellerID].Add(period);
+            //            else
+            //                sellersDic.Add(seller.SellerID, new List<PeriodOutbox>() { period });
 
-                    }
+            //        }
 
-                }
+            //    }
 
-            }
+            //}
 
             return sellersDic;
 

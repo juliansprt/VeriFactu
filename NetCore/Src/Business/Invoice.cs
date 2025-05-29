@@ -37,10 +37,12 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using VeriFactu.Business.Validation.NIF.TaxId;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Net.Rest.Json;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
@@ -55,7 +57,8 @@ namespace VeriFactu.Business
     /// </summary>
     public class Invoice : JsonSerializable
     {
-
+        private readonly Settings _settings;
+        private readonly ILogger _logger;
         #region Variables Privadas de Instancia
 
         /// <summary>
@@ -80,14 +83,19 @@ namespace VeriFactu.Business
         /// <param name="invoiceDate">Fecha emisión de documento.</param>
         /// <param name="sellerID">Identificador del vendedor.</param>        
         /// <exception cref="ArgumentNullException">Los argumentos invoiceID y sellerID no pueden ser nulos</exception>
-        public Invoice(string invoiceID, DateTime invoiceDate, string sellerID) 
+        public Invoice(string invoiceID, int invoiceId, int companyId, ElectronicInvoiceStates state,  DateTime invoiceDate, string sellerID, Settings settings, ILogger logger) 
         {
+            _settings = settings;
+            _logger = logger;
 
             if (invoiceID == null || sellerID == null)
                 throw new ArgumentNullException($"Los argumentos invoiceID y sellerID no pueden ser nulos.");
 
             InvoiceID = invoiceID.Trim(); // La AEAT calcula el Hash sin espacios
+            InvoicePrimaryKey = invoiceId;
+            CompanyId = companyId;
             InvoiceDate = invoiceDate;
+            State = state;
 
             var tSellerID = sellerID.Trim(); // La AEAT calcula el Hash sin espacios
             SellerID = tSellerID.ToUpper(); // https://github.com/mdiago/VeriFactu/issues/65
@@ -98,10 +106,11 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="registroAlta">Registro de alta a partir del que se crea la factura.</param>
-        public Invoice(RegistroAlta registroAlta) : this(registroAlta.IDFacturaAlta.NumSerieFactura,
-                XmlParser.ToDate(registroAlta.IDFacturaAlta.FechaExpedicionFactura), $"{registroAlta.IDFacturaAlta.IDEmisorFactura}")
+        public Invoice(RegistroAlta registroAlta, Settings settings, int invoiceId, int companyId, ILogger logger) : this(registroAlta.IDFacturaAlta.NumSerieFactura, invoiceId, companyId, ElectronicInvoiceStates.Created,
+                XmlParser.ToDate(registroAlta.IDFacturaAlta.FechaExpedicionFactura), $"{registroAlta.IDFacturaAlta.IDEmisorFactura}", settings, logger)
         {
-
+            _settings = settings;
+            _logger = logger;
             _RegistroAltaSource = registroAlta;
 
             InvoiceType = registroAlta.TipoFactura;
@@ -364,6 +373,10 @@ namespace VeriFactu.Business
         /// Identificador de la factura.
         /// </summary>
         public string InvoiceID { get; private set; }
+        public int InvoicePrimaryKey { get; private set; }
+        public int CompanyId { get; set; }
+
+        public ElectronicInvoiceStates State { get; set; }
 
         /// <summary>
         /// Fecha emisión de documento.
@@ -493,7 +506,7 @@ namespace VeriFactu.Business
 
             var registroAlta = new RegistroAlta()
             {
-                IDVersion = Settings.Current.IDVersion,
+                IDVersion = _settings.IDVersion,
                 IDFacturaAlta = new IDFactura()
                 {
                     IDEmisorFactura = SellerID.Trim(),
@@ -507,7 +520,7 @@ namespace VeriFactu.Business
                 Desglose = GetDesglose(),
                 CuotaTotal = XmlParser.GetXmlDecimal(totalTaxAmount),
                 ImporteTotal = XmlParser.GetXmlDecimal(totalAmount),
-                SistemaInformatico = Settings.Current.SistemaInformatico,
+                SistemaInformatico = _settings.SistemaInformatico.ToSistemaInformatico(),
                 TipoHuella = TipoHuella.Sha256,
                 TipoHuellaSpecified = true
             };
@@ -574,14 +587,14 @@ namespace VeriFactu.Business
 
             var registroAnulacion = new RegistroAnulacion()
             {
-                IDVersion = Settings.Current.IDVersion,
+                IDVersion = _settings.IDVersion,
                 IDFacturaAnulada = new IDFactura()
                 {
                     IDEmisorFacturaAnulada = SellerID,
                     NumSerieFacturaAnulada = InvoiceID.Trim(), // La AEAT calcula el Hash sin espacios
                     FechaExpedicionFacturaAnulada = XmlParser.GetXmlDate(InvoiceDate)
                 },
-                SistemaInformatico = Settings.Current.SistemaInformatico,
+                SistemaInformatico = _settings.SistemaInformatico.ToSistemaInformatico(),
                 TipoHuella = TipoHuella.Sha256,
                 TipoHuellaSpecified = true
             };

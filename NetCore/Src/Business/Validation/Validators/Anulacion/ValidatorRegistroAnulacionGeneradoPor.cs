@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu.Anulacion;
 using VeriFactu.Xml.Soap;
 
@@ -58,7 +59,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAnulacion"> Registro de anulación del bloque Body.</param>
-        public ValidatorRegistroAnulacionGeneradoPor(Envelope envelope, RegistroAnulacion registroAnulacion) : base(envelope, registroAnulacion)
+        public ValidatorRegistroAnulacionGeneradoPor(Envelope envelope, RegistroAnulacion registroAnulacion, Settings settings) : base(envelope, registroAnulacion, settings)
         {
         }
 

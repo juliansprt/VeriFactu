@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Soap;
 
@@ -58,7 +59,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
         /// <param name="envelope"> Sobre SOAP envío.</param>
         /// <param name="registroAlta"> Registro alta factura.</param>
         public ValidatorRegistroAltaCampoObligatorio(Envelope envelope, 
-            RegistroAlta registroAlta) : base(envelope, registroAlta)
+            RegistroAlta registroAlta, Settings settings) : base(envelope, registroAlta, settings)
         {
         }
 

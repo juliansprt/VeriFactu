@@ -37,7 +37,9 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using VeriFactu.Common;
+using VeriFactu.Net.Core.Implementation.Service;
 
 namespace VeriFactu.Business
 {
@@ -54,7 +56,7 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceCancellation(Invoice invoice) : base(invoice)
+        public InvoiceCancellation(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService processState, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, processState, settings, logger)
         {
         }
 
@@ -88,17 +90,6 @@ namespace VeriFactu.Business
         /// </summary>
         public override string InvoiceEntryID => $"{base.InvoiceEntryID}.DEL";
 
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string InvoiceEntryFilePath => $"{InvoiceEntryPath}{InvoiceEntryID}.xml";
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string ResponseFilePath => $"{ResponsesPath}{InvoiceEntryID}.xml";   
 
         #endregion
 

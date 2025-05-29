@@ -41,6 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using VeriFactu.Business.Validation.Validators.Alta.Detalle;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Soap;
@@ -96,7 +97,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAlta"> Registro de alta del bloque Body.</param>
-        public ValidatorRegistroAlta(Envelope envelope, RegistroAlta registroAlta) : base(envelope)
+        public ValidatorRegistroAlta(Envelope envelope, RegistroAlta registroAlta, Settings settings) : base(envelope, settings)
         {
 
             _RegistroAlta = registroAlta;
@@ -136,45 +137,45 @@ namespace VeriFactu.Business.Validation.Validators.Alta
             var result = new List<string>();
 
             // 0. Campos obligatorios
-            result.AddRange(new ValidatorRegistroAltaCampoObligatorio(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaCampoObligatorio(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 1. Agrupación IDFactura
-            result.AddRange(new ValidatorRegistroAltaIDFactura(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaIDFactura(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 2. RechazoPrevio
-            result.AddRange(new ValidatorRegistroAltaRechazoPrevio(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaRechazoPrevio(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 3. TipoRectificativa
-            result.AddRange(new ValidatorRegistroAltaTipoRectificativa(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaTipoRectificativa(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 4. Agrupación FacturasRectificadas
-            result.AddRange(new ValidatorRegistroAltaFacturasRectificadas(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaFacturasRectificadas(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 5. Agrupación FacturasSustituidas
-            result.AddRange(new ValidatorRegistroAltaFacturasSustituidas(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaFacturasSustituidas(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 6. Agrupación ImporteRectificacion
-            result.AddRange(new ValidatorRegistroAltaImporteRectificacion(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaImporteRectificacion(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 7. FechaOperacion
-            result.AddRange(new ValidatorRegistroAltaFechaOperacion(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaFechaOperacion(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 8. FacturaSimplificadaArt7273
-            result.AddRange(new ValidatorRegistroAltaFacturaSimplificadaArt7273(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaFacturaSimplificadaArt7273(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 9. FacturaSinIdentifDestinatarioArt61d
-            result.AddRange(new ValidatorRegistroAltaFacturaSinIdentifDestinatarioArt61d(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaFacturaSinIdentifDestinatarioArt61d(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 10. Macrodato
-            result.AddRange(new ValidatorRegistroAltaMacrodato(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaMacrodato(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 11. EmitidaPorTerceroODestinatario
-            result.AddRange(new ValidatorRegistroAltaEmitidaPorTerceroODestinatario(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaEmitidaPorTerceroODestinatario(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 12. Agrupación Tercero
-            result.AddRange(new ValidatorRegistroAltaTercero(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaTercero(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 13. Agrupación Destinatarios
-            result.AddRange(new ValidatorRegistroAltaDestinatarios(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaDestinatarios(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 14. Cupon
-            result.AddRange(new ValidatorRegistroAltaCupon(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaCupon(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 15. Agruapacion Desglose
-            result.AddRange(new ValidatorRegistroAltaDetalleDesglose(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaDetalleDesglose(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 15.8 Validaciones adicionales en el caso de facturas simplificadas.
-            result.AddRange(new ValidatorRegistroAltaDetalleDesgloseFacturaSimplificada(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaDetalleDesgloseFacturaSimplificada(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 16. CuotaTotal
-            result.AddRange(new ValidatorRegistroAltaCuotaTotal(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaCuotaTotal(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 17. ImporteTotal
-            result.AddRange(new ValidatorRegistroAltaImporteTotal(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaImporteTotal(_Envelope, _RegistroAlta, _settings).GetErrors());
             // 18. Huella (del registro anterior)
-            result.AddRange(new ValidatorRegistroAltaHuella(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaHuella(_Envelope, _RegistroAlta, _settings).GetErrors());
 
             // 19. Agrupación SistemaInformatico
             // Ver las validaciones que le aplican en su apartado correspondiente.
@@ -198,7 +199,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
             // se devolverá un aviso de error (no generará rechazo).
 
             // Validaciones adicionales del listado de errores AEAT
-            result.AddRange(new ValidatorRegistroAltaTipoFactura(_Envelope, _RegistroAlta).GetErrors());
+            result.AddRange(new ValidatorRegistroAltaTipoFactura(_Envelope, _RegistroAlta, _settings).GetErrors());
 
             return result;
 

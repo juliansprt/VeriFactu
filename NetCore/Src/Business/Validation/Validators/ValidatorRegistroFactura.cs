@@ -40,6 +40,7 @@
 using System.Collections.Generic;
 using VeriFactu.Business.Validation.Validators.Alta;
 using VeriFactu.Business.Validation.Validators.Anulacion;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Factu.Anulacion;
@@ -61,7 +62,7 @@ namespace VeriFactu.Business.Validation.Validators
         /// </summary>
         /// <param name="envelope">Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
-        public ValidatorRegistroFactura(Envelope envelope) : base(envelope)
+        public ValidatorRegistroFactura(Envelope envelope, Settings settings) : base(envelope, settings)
         {
         }
 
@@ -94,11 +95,11 @@ namespace VeriFactu.Business.Validation.Validators
                     $". Esta colección sólo admite elementos del tipo RegistroAlta o RegistroAnulacion.");
 
             if (registroAlta != null)
-                result.AddRange(new ValidatorRegistroAlta(_Envelope, registroAlta).GetErrors());
+                result.AddRange(new ValidatorRegistroAlta(_Envelope, registroAlta, _settings).GetErrors());
 
 
             if (registroAnulacion != null)
-                result.AddRange(new ValidatorRegistroAnulacion(_Envelope, registroAnulacion).GetErrors());
+                result.AddRange(new ValidatorRegistroAnulacion(_Envelope, registroAnulacion, _settings).GetErrors());
 
             return result;
 

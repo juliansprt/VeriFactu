@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Soap;
@@ -59,7 +60,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAlta"> Registro de alta del bloque Body.</param>
-        public ValidatorRegistroAltaDestinatarios(Envelope envelope, RegistroAlta registroAlta) : base(envelope, registroAlta)
+        public ValidatorRegistroAltaDestinatarios(Envelope envelope, RegistroAlta registroAlta, Settings settings) : base(envelope, registroAlta, settings)
         {
         }
 
@@ -100,7 +101,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
                 {
 
                     // Validaciones de ID
-                    result.AddRange(new ValidatorRegistroAltaInterlocutor(_Envelope, _RegistroAlta, destinatario, "Destinatario", true).GetErrors());
+                    result.AddRange(new ValidatorRegistroAltaInterlocutor(_Envelope, _RegistroAlta, destinatario, "Destinatario", _settings, true).GetErrors());
 
                     // Cuando se identifique a través del bloque “IDOtro” y IDType sea “02”, se validará que TipoFactura sea “F1”, “F3”, “R1”, “R2”, “R3” ó “R4”.
 

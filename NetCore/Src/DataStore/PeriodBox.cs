@@ -40,7 +40,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using VeriFactu.Config;
+
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Factu.Anulacion;
@@ -86,10 +86,10 @@ namespace VeriFactu.DataStore
         {
 
             var envelopes = new List<Envelope>();
-            var envelopeFiles = Directory.GetFiles(EnvelopeDir);
+            //var envelopeFiles = Directory.GetFiles(EnvelopeDir);
 
-            foreach (var envelopeFile in envelopeFiles)
-                envelopes.Add(new Envelope(envelopeFile));
+            //foreach (var envelopeFile in envelopeFiles)
+            //    envelopes.Add(new Envelope(envelopeFile));
 
             return envelopes;
 
@@ -196,12 +196,6 @@ namespace VeriFactu.DataStore
         #endregion
 
         #region Propiedades Públicas de Instancia
-
-        /// <summary>
-        /// Ruta a la bandeja. Por defecto la bandeja de salida
-        /// de registros.
-        /// </summary>
-        public virtual string EnvelopeDir => $"{Settings.Current.OutboxPath}{SellerID}{Path.DirectorySeparatorChar}{PeriodID}{Path.DirectorySeparatorChar}";
 
         /// <summary>
         /// Vendedor o emisor de facturas al que 

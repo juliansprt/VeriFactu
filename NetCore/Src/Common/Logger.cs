@@ -41,7 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using VeriFactu.Config;
+
 
 namespace VeriFactu.Common
 {
@@ -156,13 +156,13 @@ namespace VeriFactu.Common
         public void Save(string path = null)
         {
 
-            var text = $"{this}";
+            //var text = $"{this}";
 
-            if (string.IsNullOrEmpty(text))
-                return;
+            //if (string.IsNullOrEmpty(text))
+            //    return;
 
-            path = string.IsNullOrEmpty(path) ? $"{Settings.Current.LogPath}{DateTime.Now:yyyyMMddHHmmss}.txt" : path;
-            File.WriteAllText(path, $"{this}");
+            //path = string.IsNullOrEmpty(path) ? $"{Settings.Current.LogPath}{DateTime.Now:yyyyMMddHHmmss}.txt" : path;
+            //File.WriteAllText(path, $"{this}");
 
         }
 

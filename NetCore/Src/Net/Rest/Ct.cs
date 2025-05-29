@@ -37,8 +37,9 @@
     address: info@irenesolutions.com
  */
 
-using VeriFactu.Config;
+
 using VeriFactu.DataStore;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Net.Rest.Json;
 
 namespace VeriFactu.Net.Rest
@@ -55,17 +56,17 @@ namespace VeriFactu.Net.Rest
         /// <summary>
         /// Constructor
         /// </summary>
-        public Ct()
+        public Ct(Settings settings)
         {
 
-            NIF = $"{Settings.Current.SistemaInformatico.NIF}{Settings.Current.SistemaInformatico.IDOtro?.ID}";
-            SystemName = Settings.Current.SistemaInformatico.NombreSistemaInformatico;
-            SystemID = Settings.Current.SistemaInformatico.IdSistemaInformatico;
-            VersionID = Settings.Current.SistemaInformatico.Version;
-            InstallationNumber = Settings.Current.SistemaInformatico.NumeroInstalacion;
-            UseType = Settings.Current.SistemaInformatico.TipoUsoPosibleSoloVerifactu;
-            MultiOT = Settings.Current.SistemaInformatico.TipoUsoPosibleSoloVerifactu;
-            HasMultiOT = Settings.Current.SistemaInformatico.IndicadorMultiplesOT;
+            NIF = $"{settings.SistemaInformatico.NIF}";
+            SystemName = settings.SistemaInformatico.NombreSistemaInformatico;
+            SystemID = settings.SistemaInformatico.IdSistemaInformatico;
+            VersionID = settings.SistemaInformatico.Version;
+            InstallationNumber = settings.SistemaInformatico.NumeroInstalacion;
+            UseType = settings.SistemaInformatico.TipoUsoPosibleSoloVerifactu;
+            MultiOT = settings.SistemaInformatico.TipoUsoPosibleSoloVerifactu;
+            HasMultiOT = settings.SistemaInformatico.IndicadorMultiplesOT;
             CountOT = Seller.GetSellers().Count;
 
         }

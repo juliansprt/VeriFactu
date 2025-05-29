@@ -37,13 +37,14 @@
     address: info@irenesolutions.com
  */
 
+using Serilog.Core;
 using System;
 using System.Dynamic;
 using System.Net;
 using System.Text;
 using VeriFactu.Business;
 using VeriFactu.Common;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Net.Rest.Batch;
 using VeriFactu.Net.Rest.Json;
 using VeriFactu.Net.Rest.Json.Parser;
@@ -72,7 +73,7 @@ namespace VeriFactu.Net.Rest
         static ApiClient() 
         {
 
-            _Settings = Settings.Current;
+            _Settings = new Settings();
 
         }
 
@@ -92,7 +93,7 @@ namespace VeriFactu.Net.Rest
 
             byte[] buff = null;
 
-            input.ServiceKey = Settings.Current.Api.ServiceKey;
+            //input.ServiceKey = Settings.Current.Api.ServiceKey;
 
             using (WebClient wc = new WebClient())
             {
@@ -117,8 +118,8 @@ namespace VeriFactu.Net.Rest
         public static Api Api 
         { 
             get 
-            { 
-                return _Settings.Api;
+            {
+                return new Api();
             } 
         }
 
@@ -183,7 +184,7 @@ namespace VeriFactu.Net.Rest
         public static ExpandoObject GetSellers()
         {
 
-            var invoice = new Invoice("", new DateTime(1, 1, 1), "");
+            var invoice = new Invoice("", 0, 0, Core.Implementation.ElectronicInvoiceStates.Created, new DateTime(1, 1, 1), "", new Settings(), null);
             return Post(invoice, Api.EndPointGetSellers);
 
         }
@@ -249,7 +250,7 @@ namespace VeriFactu.Net.Rest
             try
             {
 
-                var ct = new Ct();
+                var ct = new Ct(new Settings());
                 return Post(ct, Api.EndPointCt);
 
             }

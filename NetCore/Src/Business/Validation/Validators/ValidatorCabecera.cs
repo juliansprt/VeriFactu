@@ -41,7 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using VeriFactu.Business.Validation.NIF;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Soap;
 
 namespace VeriFactu.Business.Validation.Validators
@@ -60,7 +60,7 @@ namespace VeriFactu.Business.Validation.Validators
         /// </summary>
         /// <param name="envelope">Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
-        public ValidatorCabecera(Envelope envelope) : base(envelope)
+        public ValidatorCabecera(Envelope envelope, Settings settings) : base(envelope, settings)
         {
         }
 
@@ -87,7 +87,7 @@ namespace VeriFactu.Business.Validation.Validators
             if (cabecera?.ObligadoEmision?.NIF == null)
                 result.Add("Error en el bloque Cabecera: El NIF del bloque ObligadoEmision debe contener un valor");
 
-            if(!Settings.Current.SkipNifAeatValidation) // 4107 = El NIF no está identificado en el censo de la AEAT.
+            if(!_settings.SkipNifAeatValidation) // 4107 = El NIF no está identificado en el censo de la AEAT.
                 result.AddRange(new NifValidation(cabecera.ObligadoEmision.NIF, cabecera.ObligadoEmision.NombreRazon).GetErrors());
 
             // 2. Representante: El NIF del representante/asesor del obligado a expedir (emitir) facturas asociado
@@ -102,7 +102,7 @@ namespace VeriFactu.Business.Validation.Validators
                 // 4107 = El NIF no está identificado en el censo de la AEAT.
                 // 4123 = Error en la cabecera: el valor del campo NIF del bloque Representante no está identificado en el censo de la AEAT.
                 // 4124 = Error en la cabecera: el valor del campo Nombre del bloque Representante no está identificado en el censo de la AEAT.
-                if (!Settings.Current.SkipNifAeatValidation) 
+                if (!_settings.SkipNifAeatValidation) 
                     result.AddRange(new NifValidation(cabecera.Representante.NIF, cabecera.Representante.NombreRazon).GetErrors());
 
             }

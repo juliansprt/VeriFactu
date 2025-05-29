@@ -39,6 +39,7 @@
 
 using System;
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 
 namespace VeriFactu.Common
 {

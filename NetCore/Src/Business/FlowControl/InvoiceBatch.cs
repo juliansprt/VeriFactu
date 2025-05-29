@@ -43,6 +43,7 @@ using System.Diagnostics;
 using System.IO;
 using VeriFactu.Business.Operations;
 using VeriFactu.Common;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Respuesta;
@@ -56,7 +57,7 @@ namespace VeriFactu.Business.FlowControl
     /// </summary>
     public class InvoiceBatch
     {
-
+        protected readonly Settings _settings;
         #region Variables Privadas de Instancia
 
         /// <summary>
@@ -79,12 +80,12 @@ namespace VeriFactu.Business.FlowControl
         /// Constructor.
         /// </summary>
         /// <param name="sellerID"></param>
-        public InvoiceBatch(string sellerID)
+        public InvoiceBatch(string sellerID, Settings settings)
         {
 
             SellerID = sellerID;
             _InvoiceActions = new List<InvoiceAction>();
-
+            _settings = settings;
         }
 
         #endregion
@@ -98,7 +99,7 @@ namespace VeriFactu.Business.FlowControl
         /// <returns>Devuelve La respuesta de la AEAT al envío.</returns>
         internal RespuestaRegFactuSistemaFacturacion Send(List<InvoiceAction> invoiceActions)
         {
-
+            
             if (invoiceActions == null || invoiceActions.Count == 0)
                 throw new ArgumentException("El argumento invoiceActions debe contener elementos.");
 
@@ -120,12 +121,12 @@ namespace VeriFactu.Business.FlowControl
 
             var xml = new XmlParser().GetBytes(envelope, Namespaces.Items);
 
-            var response = last.Send(xml);
+            var response = last.Send(xml, _settings.VeriFactuEndPointPrefix);
 
             var envelopeRespuesta = last.GetResponseEnvelope(response);
 
-            File.WriteAllBytes($"{first.InvoiceEntryPath}{first.InvoiceEntryID}.{last.InvoiceEntryID}.xml", xml);
-            File.WriteAllText($"{first.ResponsesPath}{first.InvoiceEntryID}.{last.InvoiceEntryID}.xml", response);
+            //File.WriteAllBytes($"{first.InvoiceEntryPath}{first.InvoiceEntryID}.{last.InvoiceEntryID}.xml", xml);
+            //File.WriteAllText($"{first.ResponsesPath}{first.InvoiceEntryID}.{last.InvoiceEntryID}.xml", response);
 
 
             var respuesta = (envelopeRespuesta.Body.Registro as RespuestaRegFactuSistemaFacturacion);

@@ -284,10 +284,10 @@ namespace VeriFactu.Business.FlowControl
                 return;             
 
             // Compruebo el certificado
-            var cert = Wsd.GetCheckedCertificate();
+            //var cert = Wsd.GetCheckedCertificate();
 
-            if (cert == null)
-                Utils.Log("Existe algún problema con el certificado.");
+            //if (cert == null)
+            //    Utils.Log("Existe algún problema con el certificado.");
 
             if(_IsClosing)
                 Utils.Log($"Ejecutando cola con cierre establecido {DateTime.Now:yyyy-MM-dd HH:mm:ss}.");

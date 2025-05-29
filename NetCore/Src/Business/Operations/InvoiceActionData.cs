@@ -37,11 +37,14 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using VeriFactu.Common;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation;
+using VeriFactu.Net.Core.Implementation.Exceptions;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 
 namespace VeriFactu.Business.Operations
@@ -54,7 +57,7 @@ namespace VeriFactu.Business.Operations
     /// </summary>
     public class InvoiceActionData
     {
-
+        protected Settings _settings;
         #region Construtores de Instancia
 
         /// <summary>
@@ -64,16 +67,15 @@ namespace VeriFactu.Business.Operations
         /// <param name="invoiceDate">Fecha emisión de documento.</param>
         /// <param name="sellerID">Identificador del vendedor.</param>        
         /// <exception cref="ArgumentNullException">Los argumentos invoiceID y sellerID no pueden ser nulos</exception>
-        public InvoiceActionData(string invoiceID, DateTime invoiceDate, string sellerID)
+        public InvoiceActionData(string invoiceID, int invoiceId, int companyId, ElectronicInvoiceStates state, Settings settings, DateTime invoiceDate, string sellerID, ILogger logger)
         {
-
+            _settings = settings;
             if (invoiceID == null || sellerID == null)
                 throw new ArgumentNullException($"Los argumentos invoiceID y sellerID no pueden ser nulos.");
 
-            var invoice = new Invoice(invoiceID, invoiceDate, sellerID);
+            var invoice = new Invoice(invoiceID, invoiceId, companyId, state, invoiceDate, sellerID, settings, logger);
             var errors = GetArgErrors(invoice);
             Invoice = invoice;
-            InvoicePath = GetInvoicePath(Invoice.SellerID);
 
         }
 
@@ -81,16 +83,15 @@ namespace VeriFactu.Business.Operations
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceActionData(Invoice invoice)
+        public InvoiceActionData(Invoice invoice, Settings settings)
         {
-
+            _settings = settings;
             var errors = GetArgErrors(invoice);
 
             if (errors.Count > 0)
-                throw new ArgumentException(string.Join("\n", errors));
+                throw new VerifactuValidationsInitialExceptions("Ocurrieron las siguientes errores de validacion ", errors.ToArray());
 
             Invoice = invoice;
-            InvoicePath = GetInvoicePath(Invoice.SellerID);
 
             // Establecemos el registro alta/anulación
             SetRegistro();
@@ -128,54 +129,6 @@ namespace VeriFactu.Business.Operations
 
         }
 
-        /// <summary>
-        /// Devuelve el path de un directorio.
-        /// Si no existe lo crea.
-        /// </summary>
-        /// <param name="dir">Ruta al directorio.</param>
-        /// <returns>Ruta al directorio con el separador
-        /// de directorio de sistema añadido al final.</returns>
-        internal string GetDirPath(string dir)
-        {
-
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            return $"{dir}{Path.DirectorySeparatorChar}";
-
-        }
-
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de facturas
-        /// emitidas y contabilizadas para un
-        /// vendedor en concreto.
-        /// </summary>
-        /// <param name="sellerID">Emisor al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta facturas de los registros contabilizados
-        /// para un vendedor en concreto.</returns>
-        internal string GetInvoicePath(string sellerID)
-        {
-
-            return GetDirPath($"{Settings.Current.InvoicePath}{sellerID}");
-
-        }
-
-        /// <summary>
-        /// Devuelve la ruta de almacenamiento de los
-        /// registros contabilizados y envíados para un
-        /// año en concreto.
-        /// </summary>
-        /// <param name="year">Año al que pertenece el
-        /// envío de registro a gestionar.</param>
-        /// <returns>Ruta de los registros contabilizados y
-        /// envíados para un vendedor en concreto.</returns>
-        internal string GetInvoicePostedPath(string year)
-        {
-
-            return GetDirPath($"{InvoicePath}{year}");
-
-        }
 
         /// <summary>
         /// Establece el registro relativo a la entrada
@@ -188,18 +141,6 @@ namespace VeriFactu.Business.Operations
 
         }
 
-        /// <summary>
-        /// Path de la factura en el directorio de archivado de facturas
-        /// si el documento a resultado erróneo.
-        /// </summary>
-        /// <returns>Path de la factura en el directorio de archivado de los datos de la
-        /// cadena si el documento a resultado erróneo.</returns>
-        internal string GeErrorInvoiceFilePath()
-        {
-
-            return $"{InvoicePostedPath}{EncodedInvoiceID}.ERR.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        }
 
         #endregion
 
@@ -211,22 +152,6 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         public virtual string EncodedInvoiceID => Utils.GetEncodedToHex(Invoice.InvoiceID);
 
-        /// <summary>
-        /// Path del directorio de archivado de los datos de las
-        /// facturas emitidas.
-        /// </summary>
-        public string InvoicePath { get; private set; }
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// factura.
-        /// </summary>
-        public string InvoicePostedPath => GetInvoicePostedPath($"{Invoice.InvoiceDate.Year}");
-
-        /// <summary>
-        /// Path de la factura en el directorio de facturas.
-        /// </summary>
-        public virtual string InvoiceFilePath => $"{InvoicePostedPath}{EncodedInvoiceID}.xml";
 
         /// <summary>
         /// Objeto Invoice de la entrada.

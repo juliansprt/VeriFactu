@@ -40,7 +40,7 @@
 using System.Collections.Generic;
 using VeriFactu.Business.Validation.NIF;
 using VeriFactu.Business.Validation.VIES;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Anulacion;
 using VeriFactu.Xml.Soap;
@@ -86,7 +86,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
         /// <param name="rol"> Rol del interlocutor a validar (Destinatario, Tercero...)</param>
         /// <param name="allowNoCensado"> True indica que se admite el valor IDOtro.IDType = “07” (NO CENSADO).</param>
         public ValidatorRegistroAnulacionInterlocutor(Envelope envelope, RegistroAnulacion registroAnulaciona, 
-            Interlocutor interlocutor, string rol, bool allowNoCensado = false) : base(envelope, registroAnulaciona)
+            Interlocutor interlocutor, string rol, Settings settings, bool allowNoCensado = false) : base(envelope, registroAnulaciona, settings)
         {
 
             _Interlocutor = interlocutor;
@@ -113,7 +113,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
             if (!string.IsNullOrEmpty(_Interlocutor.NIF))
             {
 
-                if (!Settings.Current.SkipNifAeatValidation)
+                if (!_settings.SkipNifAeatValidation)
                     result.AddRange(new NifValidation(_Interlocutor.NIF, _Interlocutor.NombreRazon).GetErrors());
 
                 if(_Interlocutor.NIF == _Cabecera.ObligadoEmision.NIF)
@@ -140,7 +140,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
                     result.Add($"Error en el bloque RegistroAnulacion ({_RegistroAnulacion}):" +
                         $" {_Rol} es obligatorio que se cumplimente CodigoPais con IDOtro.IDType != “02”.");
 
-                var isValidViesVatNumber = Settings.Current.SkipViesVatNumberValidation ? true : ViesVatNumber.Validate(_Interlocutor.IDOtro.ID);
+                var isValidViesVatNumber =  _settings.SkipNifAeatValidation ? true : ViesVatNumber.Validate(_Interlocutor.IDOtro.ID);
 
                 // Cuando el tercero se identifique a través de la agrupación IDOtro e IDType sea “02”,
                 // se validará que el campo identificador ID se ajuste a la estructura de NIF-IVA de

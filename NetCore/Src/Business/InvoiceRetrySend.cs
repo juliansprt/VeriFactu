@@ -37,9 +37,11 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Factu.Anulacion;
@@ -63,7 +65,7 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceRetrySend(Invoice invoice) : base(invoice)
+        public InvoiceRetrySend(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger)
         {
 
             IsRetrySend = true;
@@ -81,13 +83,8 @@ namespace VeriFactu.Business
         internal override void SetRegistro()
         {
 
-            // Path del archivo xml del registro de alta correspondiente a la factura
-            var path = OriginalInvoiceFilePath;
 
-            if(!File.Exists(OriginalInvoiceFilePath))
-                throw new Exception($"No se ha encontrado el archivo del Registro correspondiente a {this}.");
-
-            var envelope = new Envelope(OriginalInvoiceFilePath);
+            var envelope = new Envelope();
 
             // Establecemos el valor de RegistroAlta / RegistroAnulacion
             var RegFactuSistemaFacturacion = envelope.Body?.Registro as RegFactuSistemaFacturacion;
@@ -133,7 +130,7 @@ namespace VeriFactu.Business
         internal override Envelope GetEnvelope()
         {
 
-            var envelope = new Envelope(OriginalInvoiceFilePath); 
+            var envelope = new Envelope(); 
 
             // Establecemos Incidencia 
             (envelope.Body.Registro as RegFactuSistemaFacturacion).Cabecera.RemisionVoluntaria = new RemisionVoluntaria() { Incidencia = "S" };
@@ -164,7 +161,7 @@ namespace VeriFactu.Business
             // No hay que regener el Xml porqué es el de la factura original
 
             // Guardamos el xml
-            File.WriteAllBytes(InvoiceFilePath, Xml);
+            //File.WriteAllBytes(InvoiceFilePath, Xml);
 
             // Marcamos como contabilizado
             Posted = true;
@@ -174,31 +171,6 @@ namespace VeriFactu.Business
 
         #endregion
 
-        #region Propiedades Públicas de Instancia
-
-        /// <summary>
-        /// Path de la factura original en el directorio de facturas.
-        /// </summary>
-        public string OriginalInvoiceFilePath => $"{InvoicePostedPath}{EncodedInvoiceID}.xml";
-
-        /// <summary>
-        /// Path de la factura en el directorio de facturas.
-        /// </summary>
-        public override string InvoiceFilePath => $"{InvoicePostedPath}{EncodedInvoiceID}.RTS.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        /// <summary>
-        /// Path de la factura en el directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string InvoiceEntryFilePath => $"{InvoiceEntryPath}{InvoiceEntryID}.RTS.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        /// <summary>
-        /// Path del directorio de archivado de los datos de la
-        /// cadena.
-        /// </summary>
-        public override string ResponseFilePath => $"{ResponsesPath}{InvoiceEntryID}.RTS.{DateTime.Now:yyyy.MM.dd.HH.mm.ss.ffff}.xml";
-
-        #endregion
 
         #region Métodos Públicos de Instancia
 
@@ -212,10 +184,6 @@ namespace VeriFactu.Business
 
             var errors = new List<string>();
 
-            // Comprobamos que la factura existe
-            if (!File.Exists(base.InvoiceFilePath))
-                errors.Add($"No existe una entrada con SellerID: {Invoice.SellerID}" +
-                    $" en el año {Invoice.InvoiceDate.Year} con el número {Invoice.InvoiceID}.");
 
             // Limite listas
             if (Invoice.RectificationItems?.Count > 1000)

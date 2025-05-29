@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu.Alta;
 using VeriFactu.Xml.Soap;
 
@@ -58,7 +59,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAlta"> Registro de alta del bloque Body.</param>
-        public ValidatorRegistroAltaImporteRectificacion(Envelope envelope, RegistroAlta registroAlta) : base(envelope, registroAlta)
+        public ValidatorRegistroAltaImporteRectificacion(Envelope envelope, RegistroAlta registroAlta, Settings settings) : base(envelope, registroAlta, settings)
         {
         }
 

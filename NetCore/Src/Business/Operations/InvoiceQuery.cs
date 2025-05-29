@@ -37,9 +37,10 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Consulta;
@@ -55,7 +56,7 @@ namespace VeriFactu.Business.Operations
     /// </summary>
     public class InvoiceQuery
     {
-
+        protected readonly Settings _settings;
         #region Propiedades Privadas Estáticas
 
         /// <summary>
@@ -72,9 +73,9 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <param name="partyID">NIF sobre el cual ejecutar la consulta.</param>
         /// <param name="partyName">Nombre correpondiente al NIF.</param>
-        public InvoiceQuery(string partyID, string partyName) 
+        public InvoiceQuery(string partyID, string partyName, Settings settings) 
         {
-
+            _settings = settings;
             PartyID = partyID;
             PartyName = partyName;
 
@@ -93,11 +94,11 @@ namespace VeriFactu.Business.Operations
         /// <param name="sellerName"> Nombre vendedor.</param>        
         /// <returns> Objeto Invoice creado a partir de un registro
         /// de factura de una respuesta de consulta a la AEAT.</returns>
-        private static Invoice GetInvoice(RegistroRespuestaConsultaFactuSistemaFacturacion registro, string sellerName = null)
+        private static Invoice GetInvoice(RegistroRespuestaConsultaFactuSistemaFacturacion registro, int invoiceId, int companyId, Settings settings, ILogger logger, string sellerName = null)
         {
 
-            var invoice = new Invoice(registro.IDFactura.NumSerieFactura,
-                XmlParser.ToDate(registro.IDFactura.FechaExpedicionFactura), $"{registro.IDFactura.IDEmisorFactura}");
+            var invoice = new Invoice(registro.IDFactura.NumSerieFactura, invoiceId, companyId, Net.Core.Implementation.ElectronicInvoiceStates.Created,
+                XmlParser.ToDate(registro.IDFactura.FechaExpedicionFactura), $"{registro.IDFactura.IDEmisorFactura}", settings, logger);
 
             var registroAlta = registro.DatosRegistroFacturacion;
 
@@ -155,7 +156,7 @@ namespace VeriFactu.Business.Operations
                     {
                         Cabecera = new VeriFactu.Xml.Factu.Consulta.Cabecera()
                         {
-                            IDVersion = Settings.Current.IDVersion,
+                            IDVersion = _settings.IDVersion,
                             ObligadoEmision = new Interlocutor()
                             {
                                 NombreRazon = PartyName,
@@ -195,7 +196,7 @@ namespace VeriFactu.Business.Operations
                     {
                         Cabecera = new VeriFactu.Xml.Factu.Consulta.Cabecera()
                         {
-                            IDVersion = Settings.Current.IDVersion,
+                            IDVersion = _settings.IDVersion,
                             Destinatario = new Interlocutor()
                             {
                                 NombreRazon = PartyName,
@@ -243,7 +244,7 @@ namespace VeriFactu.Business.Operations
         /// <returns> Lista de objetos Invoice
         /// a partir de una respuesta de la AEAT a 
         /// una consulta de documentos.</returns>
-        public static List<Invoice> GetInvoices(RespuestaConsultaFactuSistemaFacturacion queryAeatResponse)
+        public static List<Invoice> GetInvoices(RespuestaConsultaFactuSistemaFacturacion queryAeatResponse, int invoiceId, int companyId, Settings settings, ILogger logger)
         {
 
             var invoices = new List<Invoice>();
@@ -251,7 +252,7 @@ namespace VeriFactu.Business.Operations
             var sellerName = queryAeatResponse.Cabecera?.ObligadoEmision?.NombreRazon;
 
             foreach (var registro in queryAeatResponse.RegistroRespuestaConsultaFactuSistemaFacturacion)
-                invoices.Add(GetInvoice(registro, sellerName));
+                invoices.Add(GetInvoice(registro, invoiceId, companyId, settings, logger, sellerName));
 
             return invoices;
 

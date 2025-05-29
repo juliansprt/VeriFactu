@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Alta;
@@ -70,7 +71,7 @@ namespace VeriFactu.Business.Validation.Validators.Alta.Detalle.Regimen
         /// <param name="registroAlta"> Registro alta factura.</param>
         /// <param name="detalleDesglose"> DetalleDesglose a validar. </param>
         public ValidatorRegistroAltaDetalleDesgloseClaveRegimen(Envelope envelope, RegistroAlta registroAlta,
-            DetalleDesglose detalleDesglose) : base(envelope, registroAlta)
+            DetalleDesglose detalleDesglose, Settings settings) : base(envelope, registroAlta, settings)
         {
 
             _DetalleDesglose = detalleDesglose;
@@ -190,21 +191,21 @@ namespace VeriFactu.Business.Validation.Validators.Alta.Detalle.Regimen
             var _ValidatorByClaveRegimen = new Dictionary<ClaveRegimen, IValidator>() 
             {
                 // 15.6.1 ClaveRegimen 03. REBU.
-                {ClaveRegimen.Rebu,                         new ValidatorRegistroAltaDetalleDesgloseClaveRegimenRebu(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.Rebu,                         new ValidatorRegistroAltaDetalleDesgloseClaveRegimenRebu(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.2 ClaveRegimen 04. Operaciones con oro de inversión.
-                {ClaveRegimen.OroInversion,                 new ValidatorRegistroAltaDetalleDesgloseClaveRegimenOroInversion(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.OroInversion,                 new ValidatorRegistroAltaDetalleDesgloseClaveRegimenOroInversion(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.3 ClaveRegimen 06. Grupo de entidades nivel avanzado.
-                {ClaveRegimen.GrupoEntidades,               new ValidatorRegistroAltaDetalleDesgloseClaveRegimenGrupoEntidades(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.GrupoEntidades,               new ValidatorRegistroAltaDetalleDesgloseClaveRegimenGrupoEntidades(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.4 ClaveRegimen 07. Criterio de caja.
-                {ClaveRegimen.Recc,                         new ValidatorRegistroAltaDetalleDesgloseClaveRegimenRecc(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.Recc,                         new ValidatorRegistroAltaDetalleDesgloseClaveRegimenRecc(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.5 ClaveRegimen 08.
-                {ClaveRegimen.IpsiIgic,                     new ValidatorRegistroAltaDetalleDesgloseClaveRegimenIpsiIgic(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.IpsiIgic,                     new ValidatorRegistroAltaDetalleDesgloseClaveRegimenIpsiIgic(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.6 ClaveRegimen 10. Cobro por cuenta de terceros.
-                {ClaveRegimen.CobroTerceros,                new ValidatorRegistroAltaDetalleDesgloseClaveRegimenCobroTerceros(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.CobroTerceros,                new ValidatorRegistroAltaDetalleDesgloseClaveRegimenCobroTerceros(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.7 ClaveRegimen 11. Arrendamiento de local de negocio
-                {ClaveRegimen.ArrendamientoLocalNecocio,    new ValidatorRegistroAltaDetalleDesgloseClaveRegimenArrendamientoLocalNecocio(_Envelope, _RegistroAlta, _DetalleDesglose) },
+                {ClaveRegimen.ArrendamientoLocalNecocio,    new ValidatorRegistroAltaDetalleDesgloseClaveRegimenArrendamientoLocalNecocio(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) },
                 // 15.6.8 ClaveRegimen 14. IVA pendiente AAPP.
-                {ClaveRegimen.ObraPteDevengoAdmonPublica,   new ValidatorRegistroAltaDetalleDesgloseClaveRegimenObraPteDevengoAdmonPublica(_Envelope, _RegistroAlta, _DetalleDesglose) }
+                {ClaveRegimen.ObraPteDevengoAdmonPublica,   new ValidatorRegistroAltaDetalleDesgloseClaveRegimenObraPteDevengoAdmonPublica(_Envelope, _RegistroAlta, _DetalleDesglose, _settings) }
             };
 
             if(_DetalleDesglose.ClaveRegimenSpecified)

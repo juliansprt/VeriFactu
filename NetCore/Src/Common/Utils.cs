@@ -41,7 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using VeriFactu.Config;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 
 namespace VeriFactu.Common
@@ -99,17 +99,19 @@ namespace VeriFactu.Common
         /// </summary>
         static Utils()
         {
+            var VeriFactuHashAlgorithm = TipoHuella.Sha256;
+            string VeriFactuHashInputEncoding = "UTF-8";
 
-            if (!_HashAlgorithms.ContainsKey(Settings.Current.VeriFactuHashAlgorithm))
+            if (!_HashAlgorithms.ContainsKey(VeriFactuHashAlgorithm))
                 throw new ArgumentException($"El valor de la variable de configuración 'VeriFactuHashAlgorithm'" +
-                    $" no puede ser '{Settings.Current.VeriFactuHashAlgorithm}'.");
+                    $" no puede ser '{VeriFactuHashAlgorithm}'.");
 
-            if (!_Encodings.ContainsKey(Settings.Current.VeriFactuHashInputEncoding))
+            if (!_Encodings.ContainsKey(VeriFactuHashInputEncoding))
                 throw new ArgumentException($"El valor de la variable de configuración 'VeriFactuHashInputEncoding'" +
-                    $" no puede ser '{Settings.Current.VeriFactuHashInputEncoding}'.");
+                    $" no puede ser '{VeriFactuHashInputEncoding}'.");
 
-            HashAlgorithm = _HashAlgorithms[Settings.Current.VeriFactuHashAlgorithm];
-            Encoding = _Encodings[Settings.Current.VeriFactuHashInputEncoding];
+            HashAlgorithm = _HashAlgorithms[VeriFactuHashAlgorithm];
+            Encoding = _Encodings[VeriFactuHashInputEncoding];
 
             Logger = new Logger();
 
@@ -162,8 +164,8 @@ namespace VeriFactu.Common
         internal static void Log(string msg)
         {
 
-            if (Settings.Current.LoggingEnabled)
-                Logger.Log(msg);
+            //if (Settings.Current.LoggingEnabled)
+            //    Logger.Log(msg);
 
         }
 

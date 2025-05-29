@@ -40,7 +40,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using VeriFactu.Config;
+
 using VeriFactu.Xml.Factu.Fault;
 using VeriFactu.Xml.Factu.Respuesta;
 using VeriFactu.Xml.Soap;
@@ -134,11 +134,6 @@ namespace VeriFactu.DataStore
 
         #region Propiedades Públicas de Instancia
 
-        /// <summary>
-        /// Ruta a la bandeja. Por defecto la bandeja de salida
-        /// de registros.
-        /// </summary>
-        public override string EnvelopeDir => $"{Settings.Current.InboxPath}{SellerID}{Path.DirectorySeparatorChar}{PeriodID}{Path.DirectorySeparatorChar}"; 
 
         #endregion
 

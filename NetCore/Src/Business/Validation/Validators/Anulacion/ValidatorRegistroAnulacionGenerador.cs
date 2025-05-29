@@ -38,6 +38,7 @@
  */
 
 using System.Collections.Generic;
+using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
 using VeriFactu.Xml.Factu.Anulacion;
 using VeriFactu.Xml.Soap;
@@ -59,7 +60,7 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
         /// <param name="envelope"> Envelope de envío al
         /// servicio Verifactu de la AEAT.</param>
         /// <param name="registroAnulacion"> Registro de anulación del bloque Body.</param>
-        public ValidatorRegistroAnulacionGenerador(Envelope envelope, RegistroAnulacion registroAnulacion) : base(envelope, registroAnulacion)
+        public ValidatorRegistroAnulacionGenerador(Envelope envelope, RegistroAnulacion registroAnulacion, Settings settings) : base(envelope, registroAnulacion, settings)
         {
         }
 
@@ -88,8 +89,8 @@ namespace VeriFactu.Business.Validation.Validators.Anulacion
             if (_RegistroAnulacion.Generador != null && !string.IsNullOrEmpty(_RegistroAnulacion.GeneradoPor))
             {
 
-                // Validamos interlocutor
-                result.AddRange(new ValidatorRegistroAnulacionInterlocutor(_Envelope, _RegistroAnulacion, _RegistroAnulacion.Generador, "Generador").GetErrors());
+                // Validamos interlocutr
+                result.AddRange(new ValidatorRegistroAnulacionInterlocutor(_Envelope, _RegistroAnulacion, _RegistroAnulacion.Generador, "Generador", _settings).GetErrors());
 
                 // Si el valor de GeneradoPor es igual a “E”, debe estar relleno el campo NIF en el generador.
                 if (_RegistroAnulacion.GeneradoPor == "E" && string.IsNullOrEmpty(_RegistroAnulacion.Generador.NIF))

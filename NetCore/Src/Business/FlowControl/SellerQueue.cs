@@ -232,7 +232,7 @@ namespace VeriFactu.Business.FlowControl
 
             }
 
-            var blockchainManager = Blockchain.Blockchain.GetInstance(SellerID) as Blockchain.Blockchain;
+            var blockchainManager = Blockchain.Blockchain.Get(SellerID) as Blockchain.Blockchain;
 
             // Añado los registros a la cadena de bloques
             if(registros.Count > 0)

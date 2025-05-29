@@ -37,10 +37,14 @@
     address: info@irenesolutions.com
  */
 
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using VeriFactu.Business.Validation;
+using VeriFactu.Net.Core.Implementation.Exceptions;
+using VeriFactu.Net.Core.Implementation.Service;
 
 namespace VeriFactu.Business.Operations
 {
@@ -52,23 +56,24 @@ namespace VeriFactu.Business.Operations
     /// cadena de bloques.
     /// </summary>
     public class InvoiceAction : InvoiceActionPost
-    {    
-
+    {
         #region Construtores de Instancia
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceAction(Invoice invoice) : base(invoice)
+        public InvoiceAction(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger)
         {
+            if(stateProcess.FlagInvoiceProcess(invoice.State, Net.Core.Implementation.EnumVerifactuProcess.ValidacionInicial))
+            {
+                _logger.Information($"Validando la factura {invoice.InvoiceID} con fecha {invoice.InvoiceDate} y SellerID {invoice.SellerID}.", new { invoice.InvoiceID, invoice.CompanyId, invoice.InvoicePrimaryKey });
+                // Validamos
+                var errors = GetBusErrors();
 
-            // Validamos
-            var errors = GetBusErrors();
-
-            if (errors.Count > 0)
-                throw new InvalidOperationException(string.Join("\n", errors));  
-
+                if (errors.Count > 0)
+                    throw new VerifactuValidationsInitialExceptions("Ocurrio los siguientes errores de validacion", errors.ToArray());
+            }
         }
 
         #endregion
@@ -84,7 +89,7 @@ namespace VeriFactu.Business.Operations
         internal virtual List<string> GetInvoiceValidationErrors() 
         {
 
-            var validation = new InvoiceValidation(this);
+            var validation = new InvoiceValidation(this, _settings);
             return validation.GetErrors();
 
         }
@@ -145,9 +150,9 @@ namespace VeriFactu.Business.Operations
 
             var errors = new List<string>();
 
-            if (File.Exists(InvoiceFilePath))
-                errors.Add($"Ya existe una entrada con SellerID: {Invoice.SellerID}" +
-                    $" en el año {Invoice.InvoiceDate.Year} con el número {Invoice.InvoiceID}.");
+            //if (File.Exists(InvoiceFilePath))
+            //    errors.Add($"Ya existe una entrada con SellerID: {Invoice.SellerID}" +
+            //        $" en el año {Invoice.InvoiceDate.Year} con el número {Invoice.InvoiceID}.");
 
             if (string.IsNullOrEmpty(Invoice.SellerName))
                 errors.Add($"Es necesario que la propiedad Invoice.SellerName tenga un valor.");
