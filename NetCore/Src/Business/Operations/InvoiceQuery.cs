@@ -41,7 +41,6 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using VeriFactu.Common.Exceptions;
-using VeriFactu.Config;
 using System.Security.Cryptography.X509Certificates;
 using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
