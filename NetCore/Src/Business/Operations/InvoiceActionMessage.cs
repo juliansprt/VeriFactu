@@ -37,12 +37,14 @@
     address: info@irenesolutions.com
  */
 
+using Polly;
 using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using System.Xml;
 using VeriFactu.Net;
 using VeriFactu.Net.Core.Implementation;
@@ -66,7 +68,10 @@ namespace VeriFactu.Business.Operations
     {
         protected readonly IFileStorage _fileStorage;
         protected readonly IElectronicInvoiceStateService _stateProcess;
-        protected readonly ILogger _logger; 
+        protected readonly IProcessErrors _processErrors;
+        protected readonly ILogger _logger;
+        protected readonly IPostProcessVerifactu _postProcessService;
+        protected readonly IAsyncPolicy<string> _resiliencePolicy;
         #region Propiedades Privadas Estáticas
 
         /// <summary>
@@ -135,25 +140,30 @@ namespace VeriFactu.Business.Operations
         /// <param name="invoiceDate">Fecha emisión de documento.</param>
         /// <param name="sellerID">Identificador del vendedor.</param>        
         /// <exception cref="ArgumentNullException">Los argumentos invoiceID y sellerID no pueden ser nulos</exception>
-        public InvoiceActionMessage(string invoiceID, int invoiceId, int companyId, ElectronicInvoiceStates state, DateTime invoiceDate, string sellerID, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoiceID, invoiceId, companyId, state, settings, invoiceDate, sellerID, logger)
+        public InvoiceActionMessage(string invoiceID, int invoiceId, int companyId, ElectronicInvoiceStates state, DateTime invoiceDate, string sellerID, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoiceID, invoiceId, companyId, state, settings, invoiceDate, sellerID, logger)
         {
             _fileStorage = fileStorage;
             _stateProcess = stateProcess;
             _logger = logger;
+            _postProcessService = postProcessVerifactu;
+            _processErrors = processErrors;
+            _resiliencePolicy = resilencePolicy;
         }
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceActionMessage(Invoice invoice, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, settings)
+        public InvoiceActionMessage(Invoice invoice, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoice, settings)
         {
             
             _fileStorage = fileStorage;
             _stateProcess = stateProcess;
             _logger = logger;
-
+            _processErrors = processErrors;
             _logger.Information($"Generando el XML de la factura {invoice.InvoiceID} para su envío a la AEAT", new { invoice.InvoiceID, invoice.CompanyId, invoice } );
+            _postProcessService = postProcessVerifactu;
+            _resiliencePolicy = resilencePolicy;
             // Generamos el xml
             Xml = GetXml();
 
@@ -163,6 +173,13 @@ namespace VeriFactu.Business.Operations
 
         #region Métodos Privados de Instancia
 
+        protected void ChangeStateInvoice(ElectronicInvoiceStates state, string message = null, params VerifactuResponseError[] errors)
+        {
+            _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, state, message);
+            Invoice.State = state;
+            if(errors != null)
+                _processErrors.SaveErrors(Invoice.CompanyId, Invoice.InvoicePrimaryKey, Invoice.InvoiceID, errors);
+        }
 
         /// <summary>
         /// Genera el sobre SOAP.
@@ -205,13 +222,42 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <param name="xml">Archivo xml en formato binario a la AEAT.</param>
         /// <returns>Devuelve las respuesta de la AEAT.</returns>
-        internal string Send(byte[] xml, string endpointVerifactu, X509Certificate2 certificate = null)
+        internal async Task<string> SendAsync(
+            byte[] xml,
+            string endpointVerifactu,
+            X509Certificate2 certificate = null)
         {
             _logger.Information($"Enviando el XML de la factura {Invoice.InvoiceID} a la AEAT", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice });
-            var result =  SendXmlBytes(xml, endpointVerifactu, Action, certificate);
-            _logger.Information($"Recibida la respuesta de la AEAT para la factura {Invoice.InvoiceID}", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice, result });
-            return result;
 
+            // Ejecuta la llamada bajo el pipeline de resiliencia
+            var result = await _resiliencePolicy.ExecuteAsync(
+                context => Task.Run(() =>
+                    SendXmlBytes(xml, endpointVerifactu, Action, certificate, simulateTimeOut: _settings.SimulateTimeout)
+                ),
+                // Context opcional para tus callbacks de retry/fallback
+                new Context
+                {
+                    [nameof(Invoice.SellerID)] = Invoice.SellerID,
+                    [nameof(Invoice.CompanyId)] = Invoice.CompanyId,
+                    [nameof(Invoice.SellerName)] = Invoice.SellerName,
+                    [nameof(Invoice.InvoiceID)] = Invoice.InvoiceID,
+                    [nameof(Invoice.InvoiceDate)] = Invoice.InvoiceDate
+                });
+
+
+            _logger.Information($"Recibida la respuesta de la AEAT para la factura {Invoice.InvoiceID}", new { Invoice.InvoiceID, Invoice.CompanyId, Invoice, result });
+
+            return result;
+        }
+
+        /// <summary>
+        /// Envía un xml en formato binario a la AEAT.
+        /// </summary>
+        /// <param name="xml">Archivo xml en formato binario a la AEAT.</param>
+        /// <returns>Devuelve las respuesta de la AEAT.</returns>
+        internal string Send(byte[] xml, string endpointVerifactu, X509Certificate2 certificate = null)
+        {
+            return SendAsync(xml, endpointVerifactu, certificate).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -428,7 +474,7 @@ namespace VeriFactu.Business.Operations
         /// <param name="xml">Archivo xml en formato binario a la AEAT.</param>
         /// /// <param name="op"> Acción para el webservice.</param>
         /// <returns>Devuelve las respuesta de la AEAT.</returns>
-        public static string SendXmlBytes(byte[] xml, string verifactuEndpoint, string op = null, X509Certificate2 certificate = null)
+        public static string SendXmlBytes(byte[] xml, string verifactuEndpoint, string op = null, X509Certificate2 certificate = null, bool simulateTimeOut = false)
         {
             try
             {
@@ -443,6 +489,9 @@ namespace VeriFactu.Business.Operations
                 var url = verifactuEndpoint;
                 var action = $"{url}{op}";
                 
+                if(simulateTimeOut)
+                    throw new TimeoutException("Test timeout exception");
+
                 return Wsd.Call(url, action, xmlDocument, certificate);
             }
             catch (Exception ex)

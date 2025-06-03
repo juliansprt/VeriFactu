@@ -37,6 +37,7 @@
     address: info@irenesolutions.com
  */
 
+using Polly;
 using Serilog;
 using VeriFactu.Common;
 using VeriFactu.Net.Core.Implementation.Service;
@@ -56,7 +57,7 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceCancellation(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService processState, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, processState, settings, logger)
+        public InvoiceCancellation(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService processState, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoice, blockchainService, certificateService, fileStorage, processState, settings, logger, postProcessVerifactu, processErrors, resilencePolicy)
         {
         }
 

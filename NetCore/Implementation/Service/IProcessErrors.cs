@@ -10,7 +10,7 @@ namespace VeriFactu.Net.Core.Implementation.Service
 {
     public interface IProcessErrors
     {
-        void SaveErrors(int companyId, int invoiceId, string invoiceID, List<VerifactuResponseError> errors);
+        void SaveErrors(int companyId, int invoiceId, string invoiceID, IEnumerable<VerifactuResponseError> errors);
 
 
         void SaveErrors(int companyId, int invoiceId, string invoiceID, VerifactuResponseError errors);
@@ -18,7 +18,7 @@ namespace VeriFactu.Net.Core.Implementation.Service
 
     public class ProcessErrors : IProcessErrors
     {
-        public void SaveErrors(int companyId, int invoiceId, string invoiceID, List<VerifactuResponseError> errors)
+        public void SaveErrors(int companyId, int invoiceId, string invoiceID, IEnumerable<VerifactuResponseError> errors)
         {
         }
 

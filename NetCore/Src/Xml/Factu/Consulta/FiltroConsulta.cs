@@ -57,6 +57,12 @@ namespace VeriFactu.Xml.Factu.Consulta
         public PeriodoImputacion PeriodoImputacion { get; set; }
 
         /// <summary>
+        /// Id de la factura
+        /// </summary>
+        [XmlElement(Namespace = Namespaces.NamespaceCon)]
+        public string NumSerieFactura { get; set; }
+
+        /// <summary>
         /// Datos contraparte factura.
         /// </summary>
         [XmlElement(Namespace = Namespaces.NamespaceSF)]

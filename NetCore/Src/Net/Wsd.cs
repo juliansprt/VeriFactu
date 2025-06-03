@@ -37,11 +37,13 @@
     address: info@irenesolutions.com
  */
 
+using Polly;
 using System;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
+using VeriFactu.Net.Core.Implementation.Service;
 
 
 namespace VeriFactu.Net
@@ -52,7 +54,7 @@ namespace VeriFactu.Net
     /// </summary>
     public static class Wsd
     {
-
+        private static object lobkObj = new object();
         #region Métodos Privados Estáticos
 
 
@@ -79,34 +81,37 @@ namespace VeriFactu.Net
         /// <returns>Devuelve la respuesta.</returns>
         internal static string Call(string url, string action, XmlDocument xmlDocument, X509Certificate2 certificate = null)
         {
-
-            HttpWebRequest webRequest = CreateWebRequest(url, action);
-
-            //X509Certificate2 certificate = GetCheckedCertificate();
-            if(certificate != null)
-                webRequest.ClientCertificates.Add(certificate);
-
-            using (Stream stream = webRequest.GetRequestStream())
+            lock (lobkObj)
             {
-                xmlDocument.Save(stream);
+                
+                HttpWebRequest webRequest = CreateWebRequest(url, action);
+
+                //X509Certificate2 certificate = GetCheckedCertificate();
+                if (certificate != null)
+                    webRequest.ClientCertificates.Add(certificate);
+
+                using (Stream stream = webRequest.GetRequestStream())
+                {
+                    xmlDocument.Save(stream);
+                }
+
+                HttpWebResponse response = (HttpWebResponse)webRequest.GetResponse();
+
+                Stream dataStream = response.GetResponseStream();
+
+                string responseFromServer;
+
+                using (StreamReader reader = new StreamReader(dataStream))
+                {
+                    responseFromServer = reader.ReadToEnd();
+                    reader.Close();
+                    dataStream.Close();
+                    response.Close();
+                }
+
+
+                return responseFromServer;
             }
-
-            HttpWebResponse response = (HttpWebResponse)webRequest.GetResponse();
-
-            Stream dataStream = response.GetResponseStream();
-
-            string responseFromServer;
-
-            using (StreamReader reader = new StreamReader(dataStream))
-            {
-                responseFromServer = reader.ReadToEnd();
-                reader.Close();
-                dataStream.Close();
-                response.Close();
-            }
-
-
-            return responseFromServer;
 
         }
 

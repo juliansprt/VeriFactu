@@ -40,6 +40,7 @@
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
@@ -57,6 +58,8 @@ namespace VeriFactu.Business.Operations
     public class InvoiceQuery
     {
         protected readonly Settings _settings;
+        protected readonly ICertificateService _certificateService;
+        protected readonly X509Certificate2 _certificate;
         #region Propiedades Privadas Estáticas
 
         /// <summary>
@@ -73,12 +76,26 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <param name="partyID">NIF sobre el cual ejecutar la consulta.</param>
         /// <param name="partyName">Nombre correpondiente al NIF.</param>
-        public InvoiceQuery(string partyID, string partyName, Settings settings) 
+        public InvoiceQuery(string partyID, int companyId, string partyName, Settings settings, ICertificateService certificateService) 
         {
             _settings = settings;
             PartyID = partyID;
             PartyName = partyName;
+            _certificateService = certificateService;
+            _certificate = _certificateService.GetCertificate(companyId);
+        }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="partyID">NIF sobre el cual ejecutar la consulta.</param>
+        /// <param name="partyName">Nombre correpondiente al NIF.</param>
+        public InvoiceQuery(string partyID, int companyId, string partyName, Settings settings, X509Certificate2 certificate)
+        {
+            _settings = settings;
+            PartyID = partyID;
+            PartyName = partyName;
+            _certificate = certificate;
         }
 
         #endregion
@@ -177,6 +194,48 @@ namespace VeriFactu.Business.Operations
 
         }
 
+
+        /// <summary>
+        /// Devuelve un objeto Envelope con el filtro
+        /// para la consulta de facturas emitidas.
+        /// </summary>
+        /// <param name="year">Año a consultar.</param>
+        /// <param name="month">Mes a consultar.</param>
+        /// <returns> Objeto Envelope con el filtro
+        /// para la consulta de facturas emitidas.</returns>
+        private Envelope GetInvoiceEnvelope(string year, string month, string invoiceId)
+        {
+
+            return new Envelope()
+            {
+                Body = new Body()
+                {
+                    Registro = new ConsultaFactuSistemaFacturacion()
+                    {
+                        Cabecera = new VeriFactu.Xml.Factu.Consulta.Cabecera()
+                        {
+                            IDVersion = _settings.IDVersion,
+                            ObligadoEmision = new Interlocutor()
+                            {
+                                NombreRazon = PartyName,
+                                NIF = PartyID
+                            }
+                        },
+                        FiltroConsulta = new FiltroConsulta()
+                        {
+                            PeriodoImputacion = new Xml.Factu.Consulta.PeriodoImputacion()
+                            {
+                                Ejercicio = year,
+                                Periodo = month.PadLeft(2, '0')
+                            },
+                            NumSerieFactura = invoiceId
+                        }
+                    }
+                }
+            };
+
+        }
+
         /// <summary>
         /// Devuelve un objeto Envelope con el filtro
         /// para la consulta de facturas recibidas.
@@ -231,6 +290,8 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         public string PartyName { get; private set; }
 
+        public int CompanyId { get; private set; }
+
         #endregion
 
         #region Métodos Públicos Estáticos
@@ -274,7 +335,35 @@ namespace VeriFactu.Business.Operations
 
             var envelope = GetSalesEnvelope(year, month);
             var xml = new XmlParser().GetBytes(envelope, Namespaces.Items);
-            var response = InvoiceActionMessage.SendXmlBytes(xml, _Action);
+            var response = InvoiceActionMessage.SendXmlBytes(xml, _Action, simulateTimeOut: _settings.SimulateTimeout);
+            var envelopeResponse = Envelope.FromXml(response);
+
+            var fault = envelopeResponse.Body.Registro as Fault;
+
+            if (fault != null)
+                throw new Exception($"{fault.faultstring}");
+
+            return envelopeResponse.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
+
+        }
+
+        /// <summary>
+        /// Devuelve las facturas emitidas por el NIF filtrado por invoiceId
+        /// facilitado en la propiedad PartyID.
+        /// </summary>
+        /// <param name="year">Año a consultar.</param>
+        /// <param name="month">Mes a consultar.</param>
+        /// <returns>Facturas emitidas registradas en la AEAT.</returns>
+        public RespuestaConsultaFactuSistemaFacturacion GetInvoice(string year, string month,  string invoiceId)
+        {
+
+            var envelope = GetInvoiceEnvelope(year, month, invoiceId);
+            var xml = new XmlParser().GetBytes(envelope, Namespaces.Items);
+
+            if (_certificate == null)
+                throw new Exception("Existe algún problema con el certificado.");
+
+            var response = InvoiceActionMessage.SendXmlBytes(xml, _settings.VeriFactuEndPointPrefix, _Action, _certificate, simulateTimeOut: _settings.SimulateTimeout);
             var envelopeResponse = Envelope.FromXml(response);
 
             var fault = envelopeResponse.Body.Registro as Fault;
@@ -298,7 +387,7 @@ namespace VeriFactu.Business.Operations
 
             var envelope = GetPurchasesEnvelope(year, month);
             var xml = new XmlParser().GetBytes(envelope, Namespaces.Items);
-            var response = InvoiceActionMessage.SendXmlBytes(xml, _Action);
+            var response = InvoiceActionMessage.SendXmlBytes(xml, _Action, simulateTimeOut: _settings.SimulateTimeout);
             var envelopeResponse = Envelope.FromXml(response);
 
             var fault = envelopeResponse.Body.Registro as Fault;

@@ -37,11 +37,14 @@
     address: info@irenesolutions.com
  */
 
+using Polly;
 using Serilog;
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using VeriFactu.Net;
+using VeriFactu.Net.Core.Implementation;
 using VeriFactu.Net.Core.Implementation.Exceptions;
 using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml.Factu;
@@ -69,7 +72,7 @@ namespace VeriFactu.Business.Operations
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceActionPost(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, fileStorage, stateProcess, settings, logger)
+        public InvoiceActionPost(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoice, fileStorage, stateProcess, settings, logger, postProcessVerifactu, processErrors, resilencePolicy)
         {
             _certificateService = certificateService;
             //BlockchainManager =  Blockchain.Blockchain.Get(Invoice.SellerID);
@@ -197,50 +200,85 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         public void Save()
         {
-
-            if (IsSaved)
-                throw new InvalidOperationException("El objeto InvoiceEntry sólo" +
-                    " puede llamar al método Save() una vez.");
-
-            _logger.Information("Iniciando Obtencion del sertificado de la entrada {InvoiceID}", Invoice.InvoiceID);
-            var cert = _certificateService.GetCertificate(Invoice.CompanyId);
-            _logger.Information("Certificado obtenido de la entrada {InvoiceID}", Invoice.InvoiceID);
             try
             {
+                _logger.Information("Iniciando Obtencion del sertificado de la entrada {InvoiceID}", Invoice.InvoiceID);
+                var cert = _certificateService.GetCertificate(Invoice.CompanyId);
+                _logger.Information("Certificado obtenido de la entrada {InvoiceID}", Invoice.InvoiceID);
+                try
+                {
 
-                ExecutePost(cert);
-                _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.PendingSendAEAT, string.Empty);
-                _logger.Information("Iniciando envio a AEAT de la entrada {InvoiceID} Cambio de estado a PendingSendAEAT", Invoice.InvoiceID);
+                    ExecutePost(cert);
+                    ChangeStateInvoice(ElectronicInvoiceStates.PendingSendAEAT);
+                    _logger.Information("Iniciando envio a AEAT de la entrada {InvoiceID} Cambio de estado a PendingSendAEAT", Invoice.InvoiceID);
 
-                ExecuteSend(_settings.VeriFactuEndPointPrefix, cert);
+                    ExecuteSend(_settings.VeriFactuEndPointPrefix, cert);
 
-                _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.SendedAEAT, string.Empty);
-                _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito Cambio de estado a SendedAEAT", Invoice.InvoiceID);
-                ProcessResponse();
+                    ChangeStateInvoice(ElectronicInvoiceStates.SendedAEAT);
+                    _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito Cambio de estado a SendedAEAT", Invoice.InvoiceID);
+                    ProcessResponse();
+                }
+                catch (VerifactuExceptions ex)
+                {
+                    _logger.Information(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
+                    ClearPost();
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
+                    ClearPost();
+                    throw;
+                }
+
+                _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito", Invoice.InvoiceID);
+                ChangeStateInvoice(ElectronicInvoiceStates.Valid);
+
+                var qr = Registro.GetValidateQr(_settings.VeriFactuEndPointValidatePrefix);
+
+                _postProcessService.ProcessVerifactu(Invoice.CompanyId, Invoice.InvoicePrimaryKey, Invoice.State, qr);
+
+                _logger.Information("Cambio de estado a Valid de la entrada {InvoiceID}", Invoice.InvoiceID);
+                //if (string.IsNullOrEmpty(CSV))
+                //{
+                //    ClearPost();
+                //}
+            }
+            catch (VerifactuValidationsInitialExceptions ex)
+            {
+                _logger.Information(ex, "Error de validación inicial de la entrada {InvoiceID}", Invoice.InvoiceID);
+                ChangeStateInvoice(ElectronicInvoiceStates.Incorrect, ex.Message, ex.Validations.Select(p => new VerifactuResponseError(string.Empty, p)).ToArray());
+                throw;
+            }
+            catch (VerifactuResponseException ex)
+            {
+                const string EstadoParcialmentCorrecto = "ParcialmenteCorrecto";
+                ElectronicInvoiceStates state = ElectronicInvoiceStates.Incorrect;
+
+                if (ex.EstadoEnvio == EstadoParcialmentCorrecto)
+                    state = ElectronicInvoiceStates.PartlyCorrect;
+
+                _logger.Information(ex, "Cambio de estado {InvoiceID} a {state}", Invoice.InvoiceID, state);
+                ChangeStateInvoice(state, ex.Message, ex.Errors.Select(p => new VerifactuResponseError(p.CodigoError, p.DescripcionError)).ToArray());
+                if (state == ElectronicInvoiceStates.Incorrect)
+                    throw;
             }
             catch (VerifactuExceptions ex)
             {
-                _logger.Information(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
-                ClearPost();
+                _logger.Error(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
+                ChangeStateInvoice(ElectronicInvoiceStates.Failed, ex.Message, new VerifactuResponseError("INTERNAL", ex.Message));
                 throw;
             }
+
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
-                ClearPost();
+                ChangeStateInvoice(ElectronicInvoiceStates.Failed, ex.Message, new VerifactuResponseError("INTERNAL", ex.Message));
                 throw;
             }
 
-            _logger.Information("Envio a AEAT de la entrada {InvoiceID} realizado con exito", Invoice.InvoiceID);
-            _stateProcess.SetInvoiceState(Invoice.InvoicePrimaryKey, Net.Core.Implementation.ElectronicInvoiceStates.Valid, string.Empty);
-            _logger.Information("Cambio de estado a Valid de la entrada {InvoiceID}", Invoice.InvoiceID);
-            //if (string.IsNullOrEmpty(CSV))
-            //{
-            //    ClearPost();
-            //}
 
 
-            IsSaved = true;
 
         }
 

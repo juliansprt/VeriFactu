@@ -23,6 +23,7 @@ namespace VeriFactu.Net.Core.Implementation.Service
                 VeriFactuEndPointPrefix = "https://prewww1.aeat.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP",
                 SkipNifAeatValidation = true,
                 VeriFactuEndPointValidatePrefix = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR",
+                SimulateTimeout = true,
                 SistemaInformatico = new SettingsSistemaInformatico()
                 {
                     NombreRazon = "FacturasApp",
@@ -34,6 +35,17 @@ namespace VeriFactu.Net.Core.Implementation.Service
                     TipoUsoPosibleSoloVerifactu = "N",
                     TipoUsoPosibleMultiOT = "S",
                     IndicadorMultiplesOT = "S"
+                },
+                ResilenceOptions = new ResilienceOptions()
+                {
+                    RetryCount = 3,
+                    RetryBaseDelaySeconds = 2,
+                    JitterMilliseconds = 100,
+                    CircuitBreaker = new CircuitBreakerOptions()
+                    {
+                        FailureThreshold = 5,
+                        DurationOfBreakSeconds = 60
+                    }
                 }
             };
         }
@@ -47,7 +59,11 @@ namespace VeriFactu.Net.Core.Implementation.Service
         public bool SkipNifAeatValidation { get; set; }
 
         public string VeriFactuEndPointValidatePrefix { get; set; }
+
+        public bool SimulateTimeout { get; set; }
         public SettingsSistemaInformatico SistemaInformatico { get; set; }
+
+        public ResilienceOptions ResilenceOptions { get; set; }
     }
 
     public class SettingsSistemaInformatico
@@ -65,6 +81,20 @@ namespace VeriFactu.Net.Core.Implementation.Service
 
         public string IndicadorMultiplesOT { get; set; }
 
+    }
+
+    public class ResilienceOptions
+    {
+        public int RetryCount { get; set; }
+        public int RetryBaseDelaySeconds { get; set; }
+        public int JitterMilliseconds { get; set; }
+        public CircuitBreakerOptions CircuitBreaker { get; set; }
+    }
+
+    public class CircuitBreakerOptions
+    {
+        public int FailureThreshold { get; set; }
+        public int DurationOfBreakSeconds { get; set; }
     }
 
     public static class SettingsExtenstions

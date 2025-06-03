@@ -37,6 +37,7 @@
     address: info@irenesolutions.com
  */
 
+using Polly;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -60,7 +61,7 @@ namespace VeriFactu.Business
         /// Constructor.
         /// </summary>
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
-        public InvoiceFix(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger)
+        public InvoiceFix(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger, postProcessVerifactu, processErrors, resilencePolicy)
         {
         }
 
