@@ -19,7 +19,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;LE_461</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\VeriFactu.xml</DocumentationFile>
@@ -273,6 +273,9 @@
     </Compile>
     <Compile Include="..\NetCore\Src\Business\Validation\VIES\ViesVatNumber.cs">
       <Link>Src\Business\Validation\VIES\ViesVatNumber.cs</Link>
+    </Compile>
+    <Compile Include="..\NetCore\Src\Common\Exceptions\FaultException.cs">
+      <Link>Src\Common\Exceptions\FaultException.cs</Link>
     </Compile>
     <Compile Include="..\NetCore\Src\Common\Logger.cs">
       <Link>Src\Common\Logger.cs</Link>

@@ -40,6 +40,8 @@
 using Serilog;
 using System;
 using System.Collections.Generic;
+using VeriFactu.Common.Exceptions;
+using VeriFactu.Config;
 using System.Security.Cryptography.X509Certificates;
 using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
@@ -369,7 +371,7 @@ namespace VeriFactu.Business.Operations
             var fault = envelopeResponse.Body.Registro as Fault;
 
             if (fault != null)
-                throw new Exception($"{fault.faultstring}");
+                throw new FaultException(fault);
 
             return envelopeResponse.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
 
@@ -393,7 +395,7 @@ namespace VeriFactu.Business.Operations
             var fault = envelopeResponse.Body.Registro as Fault;
 
             if (fault != null)
-                throw new Exception($"{fault.faultstring}");
+                throw new FaultException(fault);
 
             return envelopeResponse.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
 
