@@ -18,12 +18,12 @@ namespace VeriFactu.Net.Core.Implementation.Service
     {
         public void SaveRequestXML(byte[] bytes, int companyId, string invoiceId)
         {
-            System.IO.File.WriteAllBytes($"D:\\Cenet\\Verifactu\\Request-{invoiceId}.xml", bytes);
+            System.IO.File.WriteAllBytes($"C:\\Cenet\\Verifactu\\Request-{invoiceId}.xml", bytes);
         }
 
         public void SaveResponseXML(string content, int companyId, string invoiceId)
         {
-            System.IO.File.WriteAllText($"D:\\Cenet\\Verifactu\\Response-{invoiceId}.xml", content);
+            System.IO.File.WriteAllText($"C:\\Cenet\\Verifactu\\Response-{invoiceId}.xml", content);
         }
     }
 }

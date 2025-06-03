@@ -52,9 +52,11 @@ using VeriFactu.Net.Core.Implementation.Exceptions;
 using VeriFactu.Net.Core.Implementation.Service;
 using VeriFactu.Xml;
 using VeriFactu.Xml.Factu;
+using VeriFactu.Xml.Factu.Consulta.Respuesta;
 using VeriFactu.Xml.Factu.Fault;
 using VeriFactu.Xml.Factu.Respuesta;
 using VeriFactu.Xml.Soap;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace VeriFactu.Business.Operations
 {
@@ -127,6 +129,17 @@ namespace VeriFactu.Business.Operations
 
             }
 
+        }
+
+        internal RespuestaConsultaFactuSistemaFacturacion RespuestaConsultaFactuSistemaFacturacion
+        {
+            get
+            {
+                if(ResponseEnvelope == null)
+                    return null;
+                
+                return ResponseEnvelope.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
+            }
         }
 
         #endregion
@@ -298,7 +311,8 @@ namespace VeriFactu.Business.Operations
             ProcessResponse(ResponseEnvelope);
 
             if (ErrorFault != null)
-                throw new VerifactuResponseException($"Error en la respuesta de la AEAT: {ErrorFault.faultstring}", RespuestaRegFactuSistemaFacturacion.EstadoEnvio, fault: ErrorFault);
+                throw new VerifactuResponseException($"Error en la respuesta de la AEAT: {ErrorFault.faultstring}", RespuestaRegFactuSistemaFacturacion.EstadoEnvio, fault: ErrorFault, errors: null);
+            
             if(RespuestaRegFactuSistemaFacturacion?.RespuestaLinea?.Count > 0)
             {
                 var errores = RespuestaRegFactuSistemaFacturacion?.RespuestaLinea?.Where(p => !string.IsNullOrEmpty(p.CodigoErrorRegistro));
@@ -307,6 +321,16 @@ namespace VeriFactu.Business.Operations
                         $"Error en la respuesta de la AEAT: {string.Join(", ", errores.Select(p => p.DescripcionErrorRegistro))}",
                         RespuestaRegFactuSistemaFacturacion.EstadoEnvio,
                         errors: errores.Select(p => new VerifactuResponseError(p.CodigoErrorRegistro, p.DescripcionErrorRegistro)));
+            }
+
+            else if (!string.IsNullOrEmpty(RespuestaConsultaFactuSistemaFacturacion?.RegistroRespuestaConsultaFactuSistemaFacturacion?.FirstOrDefault()?.EstadoRegistro?.DescripcionErrorRegistro))
+            {
+                var estadoRegistro = RespuestaConsultaFactuSistemaFacturacion.RegistroRespuestaConsultaFactuSistemaFacturacion.FirstOrDefault().EstadoRegistro;
+
+                throw new VerifactuResponseException(
+                    $"Error en la respuesta de la AEAT: {estadoRegistro.DescripcionErrorRegistro}",
+                    estadoRegistro.EstadoReg,
+                    error: new VerifactuResponseError(estadoRegistro.CodigoErrorRegistro, estadoRegistro.DescripcionErrorRegistro));
             }
 
         }

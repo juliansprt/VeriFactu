@@ -15,6 +15,15 @@ namespace VeriFactu.Net.Core.Implementation.Exceptions
 
         public string EstadoEnvio { get; set; }
 
+        public override bool RemoveBlockchain 
+        {
+            get 
+            {
+                return
+                    EstadoEnvio != ConstEstadosEnvio.AceptadaConErrores;
+            }
+        }
+
         public VerifactuResponseException(string message, string estadoEnvio,  Fault fault = null, IEnumerable<VerifactuResponseError> errors = null) : base(message, EnumVerifactuProcess.ProcesandoRespuesta)
         {
             Fault = fault;
@@ -55,6 +64,27 @@ namespace VeriFactu.Net.Core.Implementation.Exceptions
             if (errors != null)
             {
                 Errors.AddRange(errors);
+            }
+        }
+
+        public VerifactuResponseException(string message, string estadoEnvio, Fault fault = null, VerifactuResponseError error = null) : base(message, EnumVerifactuProcess.ProcesandoRespuesta)
+        {
+            Fault = fault;
+            EstadoEnvio = estadoEnvio;
+            if (fault != null)
+            {
+                StringBuilder builderDescription = new StringBuilder();
+                builderDescription.AppendLine($"{nameof(fault.faultstring)}: {fault.faultstring}");
+                if (fault.detail != null)
+                {
+                    builderDescription.AppendLine($"{nameof(fault.detail.callstack)}: {fault.detail.callstack}");
+                }
+
+                Errors.Add(new VerifactuResponseError(fault.faultcode, builderDescription.ToString()));
+            }
+            if (error != null)
+            {
+                Errors.Add(error);
             }
         }
     }

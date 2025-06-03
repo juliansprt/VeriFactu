@@ -66,15 +66,13 @@ namespace VeriFactu.Business.Operations
         /// <param name="invoice">Instancia de factura de entrada en el sistema.</param>
         public InvoiceAction(Invoice invoice, IBlockchainService blockchainService, ICertificateService certificateService, IFileStorage fileStorage, IElectronicInvoiceStateService stateProcess, Settings settings, ILogger logger, IPostProcessVerifactu postProcessVerifactu, IProcessErrors processErrors, IAsyncPolicy<string> resilencePolicy) : base(invoice, blockchainService, certificateService, fileStorage, stateProcess, settings, logger, postProcessVerifactu, processErrors, resilencePolicy)
         {
-            if(stateProcess.FlagInvoiceProcess(invoice.State, Net.Core.Implementation.EnumVerifactuProcess.ValidacionInicial))
-            {
-                _logger.Information($"Validando la factura {invoice.InvoiceID} con fecha {invoice.InvoiceDate} y SellerID {invoice.SellerID}.", new { invoice.InvoiceID, invoice.CompanyId, invoice.InvoicePrimaryKey });
-                // Validamos
-                var errors = GetBusErrors();
 
-                if (errors.Count > 0)
-                    throw new VerifactuValidationsInitialExceptions("Ocurrio los siguientes errores de validacion", errors.ToArray());
-            }
+            _logger.Information($"Validando la factura {invoice.InvoiceID} con fecha {invoice.InvoiceDate} y SellerID {invoice.SellerID}.", new { invoice.InvoiceID, invoice.CompanyId, invoice.InvoicePrimaryKey });
+            // Validamos
+            var errors = GetBusErrors();
+
+            if (errors.Count > 0)
+                throw new VerifactuValidationsInitialExceptions("Ocurrio los siguientes errores de validacion", errors.ToArray());
         }
 
         #endregion

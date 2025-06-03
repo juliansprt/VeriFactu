@@ -221,7 +221,8 @@ namespace VeriFactu.Business.Operations
                 catch (VerifactuExceptions ex)
                 {
                     _logger.Information(ex, "Error al enviar la entrada {InvoiceID}", Invoice.InvoiceID);
-                    ClearPost();
+                    if(ex.RemoveBlockchain)
+                        ClearPost();
                     throw;
                 }
                 catch (Exception ex)
@@ -248,20 +249,17 @@ namespace VeriFactu.Business.Operations
             {
                 _logger.Information(ex, "Error de validación inicial de la entrada {InvoiceID}", Invoice.InvoiceID);
                 ChangeStateInvoice(ElectronicInvoiceStates.Incorrect, ex.Message, ex.Validations.Select(p => new VerifactuResponseError(string.Empty, p)).ToArray());
-                throw;
             }
             catch (VerifactuResponseException ex)
             {
-                const string EstadoParcialmentCorrecto = "ParcialmenteCorrecto";
                 ElectronicInvoiceStates state = ElectronicInvoiceStates.Incorrect;
 
-                if (ex.EstadoEnvio == EstadoParcialmentCorrecto)
+                if (ex.EstadoEnvio == ConstEstadosEnvio.ParcialmenteCorrecto || ex.EstadoEnvio == ConstEstadosEnvio.AceptadaConErrores)
                     state = ElectronicInvoiceStates.PartlyCorrect;
 
                 _logger.Information(ex, "Cambio de estado {InvoiceID} a {state}", Invoice.InvoiceID, state);
                 ChangeStateInvoice(state, ex.Message, ex.Errors.Select(p => new VerifactuResponseError(p.CodigoError, p.DescripcionError)).ToArray());
-                if (state == ElectronicInvoiceStates.Incorrect)
-                    throw;
+
             }
             catch (VerifactuExceptions ex)
             {

@@ -61,6 +61,7 @@ namespace VeriFactu.Business.Operations
         protected readonly Settings _settings;
         protected readonly ICertificateService _certificateService;
         protected readonly X509Certificate2 _certificate;
+        protected readonly IFileStorage _fileStorage;
         #region Propiedades Privadas Estáticas
 
         /// <summary>
@@ -77,13 +78,14 @@ namespace VeriFactu.Business.Operations
         /// </summary>
         /// <param name="partyID">NIF sobre el cual ejecutar la consulta.</param>
         /// <param name="partyName">Nombre correpondiente al NIF.</param>
-        public InvoiceQuery(string partyID, int companyId, string partyName, Settings settings, ICertificateService certificateService) 
+        public InvoiceQuery(string partyID, int companyId, string partyName, Settings settings, ICertificateService certificateService, IFileStorage fileStorage) 
         {
             _settings = settings;
             PartyID = partyID;
             PartyName = partyName;
             _certificateService = certificateService;
             _certificate = _certificateService.GetCertificate(companyId);
+            _fileStorage = fileStorage;
         }
 
         /// <summary>
@@ -355,7 +357,7 @@ namespace VeriFactu.Business.Operations
         /// <param name="year">Año a consultar.</param>
         /// <param name="month">Mes a consultar.</param>
         /// <returns>Facturas emitidas registradas en la AEAT.</returns>
-        public RespuestaConsultaFactuSistemaFacturacion GetInvoice(string year, string month,  string invoiceId)
+        public string GetInvoice(string year, string month,  string invoiceId)
         {
 
             var envelope = GetInvoiceEnvelope(year, month, invoiceId);
@@ -367,12 +369,15 @@ namespace VeriFactu.Business.Operations
             var response = InvoiceActionMessage.SendXmlBytes(xml, _settings.VeriFactuEndPointPrefix, _Action, _certificate, simulateTimeOut: _settings.SimulateTimeout);
             var envelopeResponse = Envelope.FromXml(response);
 
-            var fault = envelopeResponse.Body.Registro as Fault;
+            return response;
+            //_fileStorage.SaveResponseXML(response, CompanyId, invoiceId);
 
-            if (fault != null)
-                throw new FaultException(fault);
+            //var fault = envelopeResponse.Body.Registro as Fault;
 
-            return envelopeResponse.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
+            //if (fault != null)
+            //    throw new FaultException(fault);
+
+            //return envelopeResponse.Body.Registro as RespuestaConsultaFactuSistemaFacturacion;
 
         }
 

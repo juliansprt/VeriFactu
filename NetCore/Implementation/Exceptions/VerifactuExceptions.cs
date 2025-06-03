@@ -9,6 +9,8 @@ namespace VeriFactu.Net.Core.Implementation.Exceptions
     public class VerifactuExceptions : Exception
     {
         public EnumVerifactuProcess RecoveryInvoiceState { get; set; }
+
+        public virtual bool RemoveBlockchain { get; set; } = true;
         public VerifactuExceptions(string message, EnumVerifactuProcess recoveryInvoiceState) : base(message)
         {
             RecoveryInvoiceState = recoveryInvoiceState;

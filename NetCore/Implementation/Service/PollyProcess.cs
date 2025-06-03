@@ -21,12 +21,14 @@ namespace VeriFactu.Net.Core.Implementation.Service
         protected readonly Settings _settings;
         protected readonly ILogger _logger;
         protected readonly ICertificateService _certificateService;
-        public PollyProcess(ISettingsServices settingsService, ILogger logger, ICertificateService certificateService)
+        protected readonly IFileStorage _fileStorage;
+        public PollyProcess(ISettingsServices settingsService, ILogger logger, ICertificateService certificateService, IFileStorage fileStorage)
         {
             _settings = settingsService.GetSettings();
             _resilienceOptions = _settings.ResilenceOptions;
             _logger = logger;
             _certificateService = certificateService;
+            _fileStorage = fileStorage;
         }
 
         public IAsyncPolicy<string> GetAsyncPolicy()
@@ -83,13 +85,13 @@ namespace VeriFactu.Net.Core.Implementation.Service
 
                         _settings.SimulateTimeout = false; // Desactiva el timeout simulado para la consulta de estado
                         // Consulta estado o genera valor alternativo
-                        var invoiceQuery = new InvoiceQuery(sellerId, companyId, sellerName, _settings, _certificateService);
+                        var invoiceQuery = new InvoiceQuery(sellerId, companyId, sellerName, _settings, _certificateService, _fileStorage);
                         var invoice = invoiceQuery.GetInvoice(
                             invoiceDate.Year.ToString(),
                             invoiceDate.Month.ToString("D2"),
                             invoiceId);
-
-                        return invoice.ToString();
+                        
+                        return invoice;
                     },
                     // 2) onFallbackAsync: callback para logging
                     async (outcome, context) =>

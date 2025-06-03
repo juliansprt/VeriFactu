@@ -33,7 +33,7 @@ namespace ConsoleAppVerifactuTest
 
             var postProcess = new PostProcessVerifactu(qrService);
 
-            IAsyncPolicy<string> resilencePolicy = new PollyProcess(settingsService, logger, certificateService).GetAsyncPolicy();
+            IAsyncPolicy<string> resilencePolicy = new PollyProcess(settingsService, logger, certificateService, fileStorage).GetAsyncPolicy();
 
 
             //// Creamos una instacia de la clase factura
@@ -105,33 +105,6 @@ namespace ConsoleAppVerifactuTest
                 // Consultamos el resultado devuelto por la AEAT
                 Debug.Print($"Respuesta de la AEAT:\n{invoiceEntry.Response}");
             }
-            catch (VerifactuValidationsInitialExceptions ex)
-            {
-                stateProcess.SetInvoiceState(invoice.InvoicePrimaryKey, ElectronicInvoiceStates.Incorrect, ex.Message);
-                processErrors.SaveErrors(invoice.CompanyId, invoice.InvoicePrimaryKey, invoice.InvoiceID, ex.Validations.Select(p => new VerifactuResponseError(string.Empty, p)).ToList());
-                throw;
-            }
-            catch (VerifactuResponseException ex)
-            {
-                const string EstadoParcialmentCorrecto = "ParcialmenteCorrecto";
-
-                if (ex.EstadoEnvio == EstadoParcialmentCorrecto)
-                    stateProcess.SetInvoiceState(invoice.InvoicePrimaryKey, ElectronicInvoiceStates.PartlyCorrect, ex.Message);
-                else
-                    stateProcess.SetInvoiceState(invoice.InvoicePrimaryKey, ElectronicInvoiceStates.Incorrect, ex.Message);
-
-
-                processErrors.SaveErrors(invoice.CompanyId, invoice.InvoicePrimaryKey, invoice.InvoiceID, ex.Errors.Select(p => new VerifactuResponseError(p.CodigoError, p.DescripcionError)).ToList());
-                throw;
-            }
-            catch (VerifactuExceptions ex)
-            {
-
-                stateProcess.SetInvoiceState(invoice.InvoicePrimaryKey, ElectronicInvoiceStates.Failed, ex.Message);
-                processErrors.SaveErrors(invoice.CompanyId, invoice.InvoicePrimaryKey, invoice.InvoiceID, new VerifactuResponseError("INTERNAL", ex.Message));
-                throw;
-            }
-
             catch (Exception ex)
             {
                 stateProcess.SetInvoiceState(invoice.InvoicePrimaryKey, ElectronicInvoiceStates.Failed, ex.Message);
